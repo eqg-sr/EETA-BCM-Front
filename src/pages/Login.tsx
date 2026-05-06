@@ -35,7 +35,7 @@ export default function Login() {
             alt="Logo" 
             className="w-32 h-32 mx-auto mb-4 object-contain"
           />
-          <h1 className="text-2xl font-bold text-[#001f3f]">Bienvenido</h1>
+          <h1 className="text-2xl font-bold text-[#001f3f]">Expediente Electronico Tribunal Arbitral BCM</h1>
           <p className="text-slate-500 mt-2 text-sm">Ingresa tus credenciales para acceder</p>
         </div>
 

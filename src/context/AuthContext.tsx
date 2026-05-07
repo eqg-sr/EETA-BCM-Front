@@ -1,8 +1,11 @@
 import { createContext, useContext, useState } from 'react';
 
+export type Role = 'juez' | 'demandado' | 'actor' | 'secretario';
+
 type User = {
   email: string;
-  role: 'admin' | 'user';
+  name: string;
+  role: Role;
 };
 
 type AuthContextType = {
@@ -31,3 +34,23 @@ export const useAuth = () => {
   if (!ctx) throw new Error('useAuth must be used within AuthProvider');
   return ctx;
 };
+
+export const ROLE_LABELS: Record<Role, string> = {
+  juez: 'Juez/a',
+  demandado: 'Demandado',
+  actor: 'Actor',
+  secretario: 'Secretario/a del Tribunal',
+};
+
+export function usePermissions() {
+  const { user } = useAuth();
+  const role = user?.role;
+  return {
+    role,
+    canCreateExpediente: role === 'actor',
+    canEditExpediente: role === 'actor',
+    canAddComment: role === 'secretario',
+    canCreateCausa: role === 'actor' || role === 'secretario',
+    isReadOnly: role === 'juez' || role === 'demandado',
+  };
+}

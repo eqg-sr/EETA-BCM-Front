@@ -1,24 +1,17 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { FolderOpen, Filter, Search, ExternalLink } from 'lucide-react';
+import { Folder, Plus, Search, ExternalLink } from 'lucide-react';
 import Layout from '../components/Layout';
 import { useCausas } from '../context/CausasContext';
+import { usePermissions } from '../context/AuthContext';
 
-export default function ViewExpedients() {
+export default function Causas() {
   const { causas } = useCausas();
+  const { canCreateCausa } = usePermissions();
   const [query, setQuery] = useState('');
 
-  const rows = causas.flatMap((c) =>
-    c.expedientes.map((e) => ({
-      causaId: c.id,
-      identificador: c.identificador,
-      tribunal: c.tribunal,
-      ...e,
-    }))
-  );
-
-  const filtered = rows.filter((r) =>
-    `${r.nroExpediente} ${r.caratula} ${r.objetoJuicio}`.toLowerCase().includes(query.toLowerCase())
+  const filtered = causas.filter((c) =>
+    `${c.identificador} ${c.caratula} ${c.tribunal}`.toLowerCase().includes(query.toLowerCase())
   );
 
   return (
@@ -26,20 +19,25 @@ export default function ViewExpedients() {
       <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
         <div>
           <div className="flex items-center gap-2 text-[#001f3f] mb-1">
-            <FolderOpen size={24} strokeWidth={2.5} />
+            <Folder size={24} strokeWidth={2.5} />
             <h1 className="text-2xl font-extrabold tracking-tight text-slate-900">
-              Expedientes
+              Causas
             </h1>
           </div>
           <p className="text-slate-500 text-sm">
-            Vista directa de todos los expedientes del sistema. Para crear uno, abrí la causa correspondiente.
+            Buscá una causa por identificador, carátula o tribunal.
           </p>
         </div>
 
-        <button className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-xl hover:bg-slate-50 transition-colors text-sm font-semibold shadow-sm">
-          <Filter size={18} />
-          Filtrar
-        </button>
+        {canCreateCausa && (
+          <Link
+            to="/causas/new"
+            className="flex items-center gap-2 px-5 py-2.5 bg-[#001f3f] text-white rounded-xl hover:bg-[#002d5a] transition-all shadow-lg shadow-blue-900/20 text-sm font-bold active:scale-95"
+          >
+            <Plus size={18} strokeWidth={3} />
+            Nueva Causa
+          </Link>
+        )}
       </div>
 
       <div className="relative mb-6">
@@ -47,7 +45,7 @@ export default function ViewExpedients() {
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Buscar por nro de expediente, carátula u objeto..."
+          placeholder="Buscar causa..."
           className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#001f3f]/10 focus:border-[#001f3f] transition-all outline-none text-sm"
         />
       </div>
@@ -57,25 +55,29 @@ export default function ViewExpedients() {
           <table className="w-full text-sm">
             <thead className="bg-slate-50 text-left">
               <tr className="text-slate-600 text-xs uppercase tracking-wider">
-                <th className="px-4 py-3 font-semibold">Nro Expediente</th>
+                <th className="px-4 py-3 font-semibold">Identificador</th>
                 <th className="px-4 py-3 font-semibold">Carátula</th>
-                <th className="px-4 py-3 font-semibold">Objeto</th>
-                <th className="px-4 py-3 font-semibold">Fecha Inicio</th>
-                <th className="px-4 py-3 font-semibold">Últ. Movimiento</th>
+                <th className="px-4 py-3 font-semibold">Tribunal</th>
+                <th className="px-4 py-3 font-semibold">Juez/a</th>
+                <th className="px-4 py-3 font-semibold">Últ. movimiento</th>
                 <th className="px-4 py-3"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {filtered.map((r) => (
-                <tr key={r.nroExpediente} className="hover:bg-slate-50">
-                  <td className="px-4 py-3 font-mono font-semibold text-[#001f3f]">{r.nroExpediente}</td>
-                  <td className="px-4 py-3 font-semibold text-slate-800 max-w-md truncate" title={r.caratula}>{r.caratula}</td>
-                  <td className="px-4 py-3 text-slate-600">{r.objetoJuicio}</td>
-                  <td className="px-4 py-3 text-slate-500 text-xs">{r.fechaInicio}</td>
-                  <td className="px-4 py-3 text-slate-500 text-xs">{r.ultimoMovimiento}</td>
+              {filtered.map((c) => (
+                <tr key={c.id} className="hover:bg-slate-50 transition-colors">
+                  <td className="px-4 py-3 font-mono text-[#001f3f] font-semibold">
+                    {c.identificador} <span className="text-slate-400">({c.numeroInterno})</span>
+                  </td>
+                  <td className="px-4 py-3 font-semibold text-slate-800 max-w-md truncate" title={c.caratula}>
+                    {c.caratula}
+                  </td>
+                  <td className="px-4 py-3 text-slate-600 text-xs">{c.tribunal}</td>
+                  <td className="px-4 py-3 text-slate-600 text-xs">{c.juez}</td>
+                  <td className="px-4 py-3 text-slate-500 text-xs">{c.ultimoMovimiento}</td>
                   <td className="px-4 py-3 text-right">
                     <Link
-                      to={`/causas/${r.causaId}/expedientes/${r.nroExpediente}`}
+                      to={`/causas/${c.id}`}
                       className="inline-flex items-center gap-1 text-blue-700 hover:text-blue-800 font-semibold text-xs"
                     >
                       Abrir <ExternalLink size={12} />
@@ -88,8 +90,8 @@ export default function ViewExpedients() {
         </div>
       ) : (
         <div className="flex flex-col items-center justify-center py-20 bg-slate-50 rounded-3xl border-2 border-dashed border-slate-200">
-          <FolderOpen size={48} className="text-slate-300 mb-4" />
-          <p className="text-slate-500 font-medium">No hay expedientes registrados.</p>
+          <Folder size={48} className="text-slate-300 mb-4" />
+          <p className="text-slate-500 font-medium">No se encontraron causas.</p>
         </div>
       )}
     </Layout>

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { FolderOpen, Plus, Search, ExternalLink, Filter } from 'lucide-react';
+import { FolderOpen, Plus, Search, ExternalLink } from 'lucide-react';
 import Layout from '../components/Layout';
 import { useCausas } from '../context/CausasContext';
 import { usePermissions } from '../context/AuthContext';

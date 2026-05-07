@@ -1,20 +1,21 @@
 import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, ExternalLink, Paperclip, Link2, FilePlus, Send, Upload, MessageSquare } from 'lucide-react';
+import { ArrowLeft, ExternalLink, Paperclip, FilePlus, Send, Upload, MessageSquare, Info, Users, ListOrdered, Link2 } from 'lucide-react';
 import Layout from '../components/Layout';
 import { useCausas, type Movimiento, type MovimientoTipo, type Comentario } from '../context/CausasContext';
 import { useAuth, ROLE_LABELS } from '../context/AuthContext';
 
-type TabKey = 'info' | 'sujetos' | 'movimientos' | 'expediente' | 'relacionadas';
+const SECTIONS = [
+  { id: 'info', label: 'Información General', icon: Info },
+  { id: 'sujetos', label: 'Sujetos', icon: Users },
+  { id: 'movimientos', label: 'Movimientos', icon: ListOrdered },
+  { id: 'relacionadas', label: 'Causas Relacionadas', icon: Link2 },
+] as const;
 
 export default function CausaDetalle() {
   const { id } = useParams<{ id: string }>();
   const { getCausa } = useCausas();
   const causa = id ? getCausa(id) : undefined;
-
-  const [tab, setTab] = useState<TabKey>('info');
-  const [filters, setFilters] = useState({ act: true, esc: true, ced: true, mov: false });
-  const [search, setSearch] = useState('');
 
   if (!causa) {
     return (
@@ -28,14 +29,6 @@ export default function CausaDetalle() {
   }
 
   const allMovimientos = causa.expedientes.flatMap((e) => e.movimientos);
-  const filteredMov = allMovimientos.filter((m) => {
-    if (m.tipo === 'ACT' && !filters.act) return false;
-    if (m.tipo === 'ESC' && !filters.esc) return false;
-    if (m.tipo === 'CED' && !filters.ced) return false;
-    if (m.tipo === 'MOV' && !filters.mov) return false;
-    if (search && !`${m.titulo} ${m.numero}`.toLowerCase().includes(search.toLowerCase())) return false;
-    return true;
-  });
 
   return (
     <Layout>
@@ -43,7 +36,7 @@ export default function CausaDetalle() {
         <ArrowLeft size={16} /> Volver al listado
       </Link>
 
-      <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 mb-6 pb-5 border-b border-slate-200">
+      <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 mb-8 pb-5 border-b border-slate-200">
         <div>
           <div className="text-sm font-mono text-[#001f3f] font-semibold">
             {causa.identificador} <span className="text-slate-400">({causa.numeroInterno})</span> {causa.tribunal}
@@ -52,48 +45,77 @@ export default function CausaDetalle() {
         </div>
         <div className="text-right text-xs">
           <div className="text-slate-400 uppercase font-semibold">Árbitro/a</div>
-          <div className="text-slate-700 font-semibold">{causa.juez}</div>
+          <div className="text-slate-700 font-semibold">{causa.arbitro}</div>
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-1 border-b border-slate-200 mb-6">
-        {([
-          ['info', 'Información General'],
-          ['sujetos', 'Sujetos'],
-          ['movimientos', 'Movimientos'],
-          ['expediente', 'Expediente Electrónico'],
-          ['relacionadas', 'Causas Relacionadas'],
-        ] as [TabKey, string][]).map(([key, label]) => (
-          <button
-            key={key}
-            onClick={() => setTab(key)}
-            className={`px-4 py-3 text-sm font-semibold border-b-2 transition-colors ${
-              tab === key ? 'border-[#001f3f] text-[#001f3f]' : 'border-transparent text-slate-500 hover:text-slate-800'
-            }`}
-          >
-            {label}
-          </button>
-        ))}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <aside className="lg:col-span-3">
+          <nav className="lg:sticky lg:top-24 space-y-1">
+            <p className="text-[10px] uppercase font-bold tracking-widest text-slate-400 px-3 mb-2">Secciones</p>
+            {SECTIONS.map(({ id, label, icon: Icon }) => (
+              <a
+                key={id}
+                href={`#${id}`}
+                className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-semibold text-slate-600 hover:bg-slate-100 hover:text-[#001f3f] transition-colors"
+              >
+                <Icon size={16} className="text-blue-600" />
+                {label}
+              </a>
+            ))}
+          </nav>
+        </aside>
+
+        <div className="lg:col-span-9 space-y-8">
+          <Section id="info" title="Información General" icon={Info}>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <InfoRow label="Identificador" value={`${causa.identificador} (${causa.numeroInterno})`} />
+              <InfoRow label="Carátula" value={causa.caratula} />
+              <InfoRow label="Tribunal" value={causa.tribunal} />
+              <InfoRow label="Árbitro/a" value={causa.arbitro} />
+              <InfoRow label="Fecha de Presentación" value={causa.fechaPresentacion} />
+              <InfoRow label="Fecha de Inicio" value={causa.fechaInicio} />
+              <InfoRow label="Último Movimiento" value={causa.ultimoMovimiento} />
+              <InfoRow label="Objeto del Juicio" value={causa.objetoJuicio} />
+            </div>
+          </Section>
+
+          <Section id="sujetos" title="Sujetos" icon={Users}>
+            <SujetosTable sujetos={causa.sujetos} />
+          </Section>
+
+          <Section id="movimientos" title="Movimientos" icon={ListOrdered}>
+            <MovimientosBlock causaId={causa.id} movimientos={allMovimientos} />
+          </Section>
+
+          <Section id="relacionadas" title="Causas Relacionadas" icon={Link2}>
+            <CausasRelacionadasBlock relacionadas={causa.causasRelacionadas} />
+          </Section>
+        </div>
       </div>
-
-      {tab === 'info' && <FichaTab causa={causa} />}
-
-      {tab === 'sujetos' && <SujetosTab sujetos={causa.sujetos} />}
-
-      {tab === 'movimientos' && <MovimientosTab causaId={causa.id} movimientos={allMovimientos} />}
-
-      {tab === 'expediente' && (
-        <ExpedienteTab
-          movimientos={filteredMov}
-          filters={filters}
-          setFilters={setFilters}
-          search={search}
-          setSearch={setSearch}
-        />
-      )}
-
-      {tab === 'relacionadas' && <CausasRelacionadasTab relacionadas={causa.causasRelacionadas} />}
     </Layout>
+  );
+}
+
+function Section({
+  id,
+  title,
+  icon: Icon,
+  children,
+}: {
+  id: string;
+  title: string;
+  icon: typeof Info;
+  children: React.ReactNode;
+}) {
+  return (
+    <section id={id} className="bg-white rounded-2xl border border-slate-200 shadow-sm scroll-mt-24">
+      <div className="flex items-center gap-2 px-6 pt-5 pb-3 border-b border-slate-100">
+        <Icon size={18} className="text-blue-600" />
+        <h2 className="font-bold uppercase tracking-wider text-xs text-[#001f3f]">{title}</h2>
+      </div>
+      <div className="p-6">{children}</div>
+    </section>
   );
 }
 
@@ -106,131 +128,7 @@ function InfoRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-function FichaTab({ causa }: { causa: ReturnType<typeof useCausas>['causas'][number] }) {
-  return (
-    <div className="space-y-6">
-      <div className="bg-white rounded-2xl border border-slate-200 p-6">
-        <h3 className="text-xs font-bold uppercase tracking-wider text-[#001f3f] mb-4">Información General</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <InfoRow label="Identificador" value={`${causa.identificador} (${causa.numeroInterno})`} />
-          <InfoRow label="Carátula" value={causa.caratula} />
-          <InfoRow label="Tribunal" value={causa.tribunal} />
-          <InfoRow label="Juez/a" value={causa.juez} />
-          <InfoRow label="Fecha de Presentación" value={causa.fechaPresentacion} />
-          <InfoRow label="Fecha de Inicio" value={causa.fechaInicio} />
-          <InfoRow label="Último Movimiento" value={causa.ultimoMovimiento} />
-          <InfoRow label="Objeto del Juicio" value={causa.objetoJuicio} />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-type ExpedienteTabProps = {
-  movimientos: ReturnType<typeof useCausas>['causas'][number]['expedientes'][number]['movimientos'];
-  filters: { act: boolean; esc: boolean; ced: boolean; mov: boolean };
-  setFilters: (f: ExpedienteTabProps['filters']) => void;
-  search: string;
-  setSearch: (s: string) => void;
-};
-
-function ExpedienteTab({ movimientos, filters, setFilters, search, setSearch }: ExpedienteTabProps) {
-  const [page, setPage] = useState(1);
-  const pageSize = 5;
-  const total = movimientos.length;
-  const totalPages = Math.max(1, Math.ceil(total / pageSize));
-  const slice = movimientos.slice((page - 1) * pageSize, page * pageSize);
-
-  return (
-    <div>
-      <div className="flex flex-wrap items-center gap-4 mb-4">
-        {([
-          ['act', 'Actuaciones'],
-          ['esc', 'Escritos'],
-          ['ced', 'Cédulas'],
-          ['mov', 'Movimientos'],
-        ] as [keyof typeof filters, string][]).map(([key, label]) => (
-          <label key={key} className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={filters[key]}
-              onChange={(e) => setFilters({ ...filters, [key]: e.target.checked })}
-              className="w-4 h-4 accent-[#001f3f]"
-            />
-            {label}
-          </label>
-        ))}
-
-        <div className="flex items-center gap-2 ml-2">
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Buscar por Número"
-            className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-[#001f3f]/10 focus:border-[#001f3f] outline-none"
-          />
-          <button
-            type="button"
-            onClick={() => setSearch('')}
-            className="px-3 py-2 text-xs font-semibold text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50"
-          >
-            Limpiar
-          </button>
-        </div>
-      </div>
-
-      <div className="overflow-x-auto rounded-xl border border-slate-200">
-        <table className="w-full text-sm">
-          <thead className="bg-slate-50 text-left">
-            <tr className="text-slate-600 text-xs uppercase tracking-wider">
-              <th className="px-4 py-3 font-semibold">Fecha</th>
-              <th className="px-4 py-3 font-semibold">Tipo</th>
-              <th className="px-4 py-3 font-semibold">Título</th>
-              <th className="px-4 py-3 font-semibold">Número</th>
-              <th className="px-4 py-3 font-semibold">Adjuntos</th>
-              <th className="px-4 py-3 font-semibold">Relaciones</th>
-              <th className="px-4 py-3 font-semibold">Tribunal / Presentante</th>
-              <th className="px-4 py-3 font-semibold">Acceso</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {slice.map((m) => (
-              <tr key={m.id} className="hover:bg-slate-50">
-                <td className="px-4 py-3 text-slate-700 whitespace-nowrap">{m.fecha}</td>
-                <td className="px-4 py-3 font-semibold text-slate-700">{m.tipo}</td>
-                <td className="px-4 py-3 text-blue-700 font-medium">{m.titulo}</td>
-                <td className="px-4 py-3 font-mono text-slate-600">{m.numero ?? '-'}</td>
-                <td className="px-4 py-3">{m.adjuntos ? <Paperclip size={16} className="text-slate-500" /> : null}</td>
-                <td className="px-4 py-3">{m.relaciones ? <Link2 size={16} className="text-slate-500" /> : null}</td>
-                <td className="px-4 py-3 text-slate-600 text-xs">{m.tribunal ?? m.presentante ?? '-'}</td>
-                <td className="px-4 py-3 text-blue-700 text-xs">{m.acceso ?? '-'}</td>
-              </tr>
-            ))}
-            {slice.length === 0 && (
-              <tr>
-                <td colSpan={8} className="px-4 py-10 text-center text-slate-400 text-sm">
-                  Sin resultados con los filtros actuales.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      <div className="flex justify-end items-center gap-4 mt-4 text-xs text-slate-500">
-        <span>Elementos por página: {pageSize}</span>
-        <span>{(page - 1) * pageSize + 1} - {Math.min(page * pageSize, total)} de {total}</span>
-        <div className="flex items-center gap-1">
-          <button onClick={() => setPage(1)} disabled={page === 1} className="px-2 py-1 disabled:opacity-30">|&lt;</button>
-          <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} className="px-2 py-1 disabled:opacity-30">&lt;</button>
-          <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="px-2 py-1 disabled:opacity-30">&gt;</button>
-          <button onClick={() => setPage(totalPages)} disabled={page === totalPages} className="px-2 py-1 disabled:opacity-30">&gt;|</button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function SujetosTab({ sujetos }: { sujetos: ReturnType<typeof useCausas>['causas'][number]['sujetos'] }) {
+function SujetosTable({ sujetos }: { sujetos: ReturnType<typeof useCausas>['causas'][number]['sujetos'] }) {
   return (
     <div className="overflow-x-auto rounded-xl border border-slate-200">
       <table className="w-full text-sm">
@@ -259,7 +157,7 @@ function SujetosTab({ sujetos }: { sujetos: ReturnType<typeof useCausas>['causas
   );
 }
 
-function CausasRelacionadasTab({ relacionadas }: { relacionadas: ReturnType<typeof useCausas>['causas'][number]['causasRelacionadas'] }) {
+function CausasRelacionadasBlock({ relacionadas }: { relacionadas: ReturnType<typeof useCausas>['causas'][number]['causasRelacionadas'] }) {
   if (relacionadas.length === 0) {
     return <p className="text-slate-500 text-sm">No hay causas relacionadas.</p>;
   }
@@ -279,7 +177,10 @@ function CausasRelacionadasTab({ relacionadas }: { relacionadas: ReturnType<type
   );
 }
 
-function MovimientosTab({ causaId, movimientos }: {
+function MovimientosBlock({
+  causaId,
+  movimientos,
+}: {
   causaId: string;
   movimientos: ReturnType<typeof useCausas>['causas'][number]['expedientes'][number]['movimientos'];
 }) {
@@ -334,7 +235,7 @@ function MovimientosTab({ causaId, movimientos }: {
     <div className="space-y-6">
       {isSecretario && expediente && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <div className="bg-white rounded-2xl border border-slate-200 p-5">
+          <div className="bg-slate-50 rounded-2xl border border-slate-200 p-5">
             <h3 className="text-xs font-bold uppercase tracking-wider text-[#001f3f] mb-3 flex items-center gap-2">
               <FilePlus size={14} className="text-blue-600" />
               Cargar Movimiento
@@ -363,7 +264,7 @@ function MovimientosTab({ causaId, movimientos }: {
                   />
                 </div>
               </div>
-              <label className="flex items-center gap-2 bg-slate-50 border border-dashed border-slate-300 rounded-lg px-3 py-2 cursor-pointer hover:bg-slate-100 transition-colors">
+              <label className="flex items-center gap-2 bg-white border border-dashed border-slate-300 rounded-lg px-3 py-2 cursor-pointer hover:bg-slate-100 transition-colors">
                 <Upload size={14} className="text-[#001f3f]" />
                 <span className="text-xs text-slate-600 truncate">
                   {movArchivo ? movArchivo.name : 'Adjuntar PDF (opcional)'}
@@ -385,7 +286,7 @@ function MovimientosTab({ causaId, movimientos }: {
             </form>
           </div>
 
-          <div className="bg-white rounded-2xl border border-slate-200 p-5">
+          <div className="bg-slate-50 rounded-2xl border border-slate-200 p-5">
             <h3 className="text-xs font-bold uppercase tracking-wider text-[#001f3f] mb-3 flex items-center gap-2">
               <MessageSquare size={14} className="text-blue-600" />
               Agregar Comentario

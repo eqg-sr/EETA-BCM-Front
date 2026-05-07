@@ -12,7 +12,7 @@ type DemoUser = {
 };
 
 const DEMO_USERS: DemoUser[] = [
-  { email: 'juez@bcm.com.ar',        password: 'juez1234',        name: 'Dra. Analía Pérez de Olivera',     role: 'juez' },
+  { email: 'arbitro@bcm.com.ar',     password: 'arbitro1234',     name: 'Dra. Analía Pérez de Olivera',     role: 'arbitro' },
   { email: 'secretario@bcm.com.ar',  password: 'secretario1234',  name: 'Dra. Mariana Sosa',                role: 'secretario' },
   { email: 'actor@bcm.com.ar',       password: 'actor1234',       name: 'Dr. Martín Rodríguez Escalante',   role: 'actor' },
   { email: 'demandado@bcm.com.ar',   password: 'demandado1234',   name: 'Agroexport Cuyo S.R.L.',           role: 'demandado' },

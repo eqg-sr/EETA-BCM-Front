@@ -80,7 +80,7 @@ export default function Causas() {
                     {c.caratula}
                   </td>
                   <td className="px-4 py-3 text-slate-600 text-xs">{c.tribunal}</td>
-                  <td className="px-4 py-3 text-slate-600 text-xs">{c.juez}</td>
+                  <td className="px-4 py-3 text-slate-600 text-xs">{c.arbitro}</td>
                   <td className="px-4 py-3 text-slate-500 text-xs">{c.ultimoMovimiento}</td>
                   <td className="px-4 py-3 text-right">
                     <Link

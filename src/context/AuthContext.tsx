@@ -1,6 +1,6 @@
 import { createContext, useContext, useState } from 'react';
 
-export type Role = 'juez' | 'demandado' | 'actor' | 'secretario';
+export type Role = 'arbitro' | 'demandado' | 'actor' | 'secretario';
 
 type User = {
   email: string;
@@ -36,7 +36,7 @@ export const useAuth = () => {
 };
 
 export const ROLE_LABELS: Record<Role, string> = {
-  juez: 'Juez/a',
+  arbitro: 'Árbitro/a',
   demandado: 'Demandado',
   actor: 'Actor',
   secretario: 'Secretario/a del Tribunal',
@@ -51,6 +51,6 @@ export function usePermissions() {
     canEditExpediente: role === 'actor',
     canAddComment: role === 'secretario',
     canCreateCausa: role === 'actor' || role === 'secretario',
-    isReadOnly: role === 'juez' || role === 'demandado',
+    isReadOnly: role === 'arbitro' || role === 'demandado',
   };
 }

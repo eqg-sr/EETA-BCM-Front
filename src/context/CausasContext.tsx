@@ -59,7 +59,7 @@ export type Causa = {
   numeroInterno: string;
   caratula: string;
   tribunal: string;
-  juez: string;
+  arbitro: string;
   fechaPresentacion: string;
   fechaInicio: string;
   ultimoMovimiento: string;
@@ -115,7 +115,7 @@ const causa1: Causa = {
   numeroInterno: '00214',
   caratula: 'VIÑEDOS DEL VALLE S.A. C/ AGROEXPORT CUYO S.R.L. P/ INCUMPLIMIENTO DE CONTRATO DE COMPRAVENTA',
   tribunal: 'TRIBUNAL ARBITRAL BCM – SALA COMERCIAL',
-  juez: 'DRA. ANALÍA PÉREZ DE OLIVERA',
+  arbitro: 'DRA. ANALÍA PÉREZ DE OLIVERA',
   fechaPresentacion: '08/04/2026',
   fechaInicio: '08/04/2026',
   ultimoMovimiento: '24/04/2026',
@@ -160,7 +160,7 @@ const causa2: Causa = {
   numeroInterno: '00221',
   caratula: 'INVERSIONES ANDINAS S.A. C/ BODEGAS LOS CERROS S.A. P/ CONFLICTO SOCIETARIO',
   tribunal: 'TRIBUNAL ARBITRAL BCM – SALA SOCIETARIA',
-  juez: 'DR. FERNANDO ARIAS LAGOS',
+  arbitro: 'DR. FERNANDO ARIAS LAGOS',
   fechaPresentacion: '04/04/2026',
   fechaInicio: '04/04/2026',
   ultimoMovimiento: '02/05/2026',
@@ -201,7 +201,7 @@ const causa3: Causa = {
   numeroInterno: '00227',
   caratula: 'CONSTRUCTORA CUYANA S.A. C/ DESARROLLOS URBANOS DEL OESTE S.A. P/ RESOLUCIÓN DE CONTRATO Y DAÑOS',
   tribunal: 'TRIBUNAL ARBITRAL BCM – SALA COMERCIAL',
-  juez: 'DRA. ANALÍA PÉREZ DE OLIVERA',
+  arbitro: 'DRA. ANALÍA PÉREZ DE OLIVERA',
   fechaPresentacion: '02/04/2026',
   fechaInicio: '02/04/2026',
   ultimoMovimiento: '05/05/2026',

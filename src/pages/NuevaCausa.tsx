@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Info, Users, Plus, Trash2, Send, Gavel } from 'lucide-react';
+import { ArrowLeft, Info, Users, Plus, Trash2, Send, Gavel, FileText, Upload } from 'lucide-react';
 import Layout from '../components/Layout';
 import { useCausas, type Causa, type Sujeto } from '../context/CausasContext';
 import { usePermissions } from '../context/AuthContext';
@@ -21,7 +21,7 @@ export default function NuevaCausa() {
   const [numeroInterno, setNumeroInterno] = useState('');
   const [caratula, setCaratula] = useState('');
   const [tribunal, setTribunal] = useState(SALAS[0]);
-  const [juez, setJuez] = useState('');
+  const [arbitro, setArbitro] = useState('');
   const [fechaPresentacion, setFechaPresentacion] = useState('');
   const [fechaInicio, setFechaInicio] = useState('');
   const [objetoJuicio, setObjetoJuicio] = useState('');
@@ -29,6 +29,8 @@ export default function NuevaCausa() {
     { vinculo: 'ACTOR', nombre: '', representante: '', domicilio: '', domicilioElectronico: '' },
     { vinculo: 'DEMANDADO', nombre: '', representante: '', domicilio: '', domicilioElectronico: '' },
   ]);
+  const [caratulaArchivo, setCaratulaArchivo] = useState<File | null>(null);
+  const [dragActive, setDragActive] = useState(false);
 
   if (!canCreateCausa) {
     return (
@@ -62,7 +64,7 @@ export default function NuevaCausa() {
       numeroInterno,
       caratula,
       tribunal,
-      juez,
+      arbitro,
       fechaPresentacion: formatDate(fechaPresentacion),
       fechaInicio: formatDate(fechaInicio),
       ultimoMovimiento: formatDate(fechaInicio || fechaPresentacion),
@@ -182,13 +184,47 @@ export default function NuevaCausa() {
               </Field>
               <Field label="Árbitro/a designado/a">
                 <input
-                  value={juez}
-                  onChange={(e) => setJuez(e.target.value)}
+                  value={arbitro}
+                  onChange={(e) => setArbitro(e.target.value)}
                   placeholder="Ej: DRA. ANALÍA PÉREZ DE OLIVERA (a designar si vacío)"
                   className="form-input"
                 />
               </Field>
             </div>
+          </div>
+
+          <div className="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm">
+            <div className="flex items-center gap-2 text-[#001f3f] mb-4">
+              <FileText size={18} className="text-blue-600" />
+              <h2 className="font-bold uppercase tracking-wider text-xs">Carátula del Expediente</h2>
+            </div>
+
+            <label
+              onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
+              onDragLeave={() => setDragActive(false)}
+              onDrop={(e) => {
+                e.preventDefault();
+                setDragActive(false);
+                if (e.dataTransfer.files[0]) setCaratulaArchivo(e.dataTransfer.files[0]);
+              }}
+              className={`block border-2 border-dashed rounded-2xl p-10 transition-all text-center cursor-pointer ${
+                dragActive ? 'border-blue-500 bg-blue-50' : 'border-slate-200 bg-slate-50 hover:bg-slate-100'
+              }`}
+            >
+              <div className="p-4 bg-white rounded-full shadow-sm mb-4 inline-flex">
+                <Upload className="text-[#001f3f]" size={28} />
+              </div>
+              <p className="text-slate-700 font-semibold">
+                {caratulaArchivo ? caratulaArchivo.name : 'Subí el documento de la carátula'}
+              </p>
+              <p className="text-slate-400 text-xs mt-1">Solo se permiten archivos PDF (Máx. 10MB)</p>
+              <input
+                type="file"
+                accept=".pdf"
+                className="hidden"
+                onChange={(e) => setCaratulaArchivo(e.target.files?.[0] ?? null)}
+              />
+            </label>
           </div>
 
           <div className="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm space-y-5">

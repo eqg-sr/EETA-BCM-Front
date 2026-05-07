@@ -30,10 +30,6 @@ export default function Causas() {
         </div>
 
         <div className="flex items-center gap-3">
-          <button className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-xl hover:bg-slate-50 transition-colors text-sm font-semibold shadow-sm">
-            <Filter size={18} />
-            Filtrar
-          </button>
 
           {canCreateCausa && (
             <Link
@@ -65,7 +61,7 @@ export default function Causas() {
                 <th className="px-4 py-3 font-semibold">Identificador</th>
                 <th className="px-4 py-3 font-semibold">Carátula</th>
                 <th className="px-4 py-3 font-semibold">Tribunal</th>
-                <th className="px-4 py-3 font-semibold">Árbitro/a</th>
+                <th className="px-4 py-3 font-semibold">Árbitro</th>
                 <th className="px-4 py-3 font-semibold">Últ. movimiento</th>
                 <th className="px-4 py-3"></th>
               </tr>

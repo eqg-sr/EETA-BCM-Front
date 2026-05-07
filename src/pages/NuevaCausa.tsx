@@ -167,7 +167,7 @@ export default function NuevaCausa() {
           <div className="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm space-y-5">
             <div className="flex items-center gap-2 text-[#001f3f] mb-2">
               <Gavel size={18} className="text-blue-600" />
-              <h2 className="font-bold uppercase tracking-wider text-xs">Tribunal y Árbitro/a</h2>
+              <h2 className="font-bold uppercase tracking-wider text-xs">Tribunal y Árbitro</h2>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -182,7 +182,7 @@ export default function NuevaCausa() {
                   ))}
                 </select>
               </Field>
-              <Field label="Árbitro/a designado/a">
+              <Field label="Árbitro designado/a">
                 <input
                   value={arbitro}
                   onChange={(e) => setArbitro(e.target.value)}

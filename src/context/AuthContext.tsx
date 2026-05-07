@@ -36,7 +36,7 @@ export const useAuth = () => {
 };
 
 export const ROLE_LABELS: Record<Role, string> = {
-  arbitro: 'Árbitro/a',
+  arbitro: 'Árbitro',
   demandado: 'Demandado',
   actor: 'Actor',
   secretario: 'Secretario/a del Tribunal',

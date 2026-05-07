@@ -44,7 +44,7 @@ export default function CausaDetalle() {
           <h1 className="text-xl md:text-2xl font-extrabold text-slate-900 mt-1">{causa.caratula}</h1>
         </div>
         <div className="text-right text-xs">
-          <div className="text-slate-400 uppercase font-semibold">Árbitro/a</div>
+          <div className="text-slate-400 uppercase font-semibold">Árbitro</div>
           <div className="text-slate-700 font-semibold">{causa.arbitro}</div>
         </div>
       </div>
@@ -72,7 +72,7 @@ export default function CausaDetalle() {
               <InfoRow label="Identificador" value={`${causa.identificador} (${causa.numeroInterno})`} />
               <InfoRow label="Carátula" value={causa.caratula} />
               <InfoRow label="Tribunal" value={causa.tribunal} />
-              <InfoRow label="Árbitro/a" value={causa.arbitro} />
+              <InfoRow label="Árbitro" value={causa.arbitro} />
               <InfoRow label="Fecha de Presentación" value={causa.fechaPresentacion} />
               <InfoRow label="Fecha de Inicio" value={causa.fechaInicio} />
               <InfoRow label="Último Movimiento" value={causa.ultimoMovimiento} />

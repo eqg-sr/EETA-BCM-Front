@@ -1,11 +1,9 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import Login from './pages/Login';
 import Register from './pages/Register';
-import UploadExpedient from './pages/UploadExpedient';
-import ViewExpedients from './pages/ViewExpedients';
 import Causas from './pages/Causas';
+import NuevaCausa from './pages/NuevaCausa';
 import CausaDetalle from './pages/CausaDetalle';
-import ExpedienteDetalle from './pages/ExpedienteDetalle';
 import { useAuth } from './context/AuthContext';
 import HelpCenter from './pages/Help';
 
@@ -21,12 +19,8 @@ export default function AppRoutes() {
       <Route path="/help" element={<HelpCenter />} />
 
       <Route path="/causas" element={requireAuth(<Causas />)} />
+      <Route path="/causas/new" element={requireAuth(<NuevaCausa />)} />
       <Route path="/causas/:id" element={requireAuth(<CausaDetalle />)} />
-      <Route path="/causas/:id/expedientes/new" element={requireAuth(<UploadExpedient />)} />
-      <Route path="/causas/:id/expedientes/:nro" element={requireAuth(<ExpedienteDetalle />)} />
-
-      <Route path="/expedients" element={requireAuth(<ViewExpedients />)} />
-      <Route path="/upload" element={requireAuth(<UploadExpedient />)} />
 
       <Route path="*" element={<Navigate to="/causas" />} />
     </Routes>

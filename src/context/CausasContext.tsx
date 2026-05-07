@@ -7,6 +7,7 @@ export type Sujeto = {
   nombre: string;
   representante?: string;
   domicilio?: string;
+  domicilioElectronico?: string;
 };
 
 export type MovimientoTipo = 'ACT' | 'ESC' | 'CED' | 'MOV' | 'COMENTARIO';
@@ -74,6 +75,7 @@ type CausasContextType = {
   addCausa: (c: Causa) => void;
   addExpediente: (causaId: string, exp: Expediente) => void;
   addComentario: (causaId: string, nroExp: string, comentario: Comentario) => void;
+  addMovimiento: (causaId: string, nroExp: string, mov: Movimiento) => void;
 };
 
 const CausasContext = createContext<CausasContextType | null>(null);
@@ -82,8 +84,8 @@ const TRIBUNAL = 'TRIBUNAL ARBITRAL BCM';
 
 // === Causa 1: Compraventa de uva — incumplimiento ===
 const sujetos1: Sujeto[] = [
-  { vinculo: 'ACTOR', nombre: 'VIÑEDOS DEL VALLE S.A.', representante: 'DR. MARTÍN RODRÍGUEZ ESCALANTE', domicilio: 'Av. San Martín 1245, Mendoza' },
-  { vinculo: 'DEMANDADO', nombre: 'AGROEXPORT CUYO S.R.L.', representante: 'DRA. LUCÍA FERREYRA', domicilio: 'Belgrano 2380, Godoy Cruz' },
+  { vinculo: 'ACTOR', nombre: 'VIÑEDOS DEL VALLE S.A.', representante: 'DR. MARTÍN RODRÍGUEZ ESCALANTE', domicilio: 'Av. San Martín 1245, Mendoza', domicilioElectronico: 'mrodriguez@estudio-rye.com.ar' },
+  { vinculo: 'DEMANDADO', nombre: 'AGROEXPORT CUYO S.R.L.', representante: 'DRA. LUCÍA FERREYRA', domicilio: 'Belgrano 2380, Godoy Cruz', domicilioElectronico: 'lferreyra@ferreyra-asoc.com.ar' },
 ];
 
 const movs1: Movimiento[] = [
@@ -127,9 +129,9 @@ const causa1: Causa = {
 
 // === Causa 2: Disputa societaria ===
 const sujetos2: Sujeto[] = [
-  { vinculo: 'ACTOR', nombre: 'INVERSIONES ANDINAS S.A.', representante: 'DR. JAVIER MOYANO', domicilio: '9 de Julio 985, Ciudad de Mendoza' },
-  { vinculo: 'DEMANDADO', nombre: 'BODEGAS LOS CERROS S.A.', representante: 'DRA. CECILIA AGUIRRE', domicilio: 'Ruta 60 Km 12, Luján de Cuyo' },
-  { vinculo: 'TERCERO', nombre: 'ESTUDIO CONTABLE LATORRE & ASOC.', representante: 'CR. RAÚL LATORRE', domicilio: 'Patricias Mendocinas 460, Mendoza' },
+  { vinculo: 'ACTOR', nombre: 'INVERSIONES ANDINAS S.A.', representante: 'DR. JAVIER MOYANO', domicilio: '9 de Julio 985, Ciudad de Mendoza', domicilioElectronico: 'jmoyano@moyano-legal.com.ar' },
+  { vinculo: 'DEMANDADO', nombre: 'BODEGAS LOS CERROS S.A.', representante: 'DRA. CECILIA AGUIRRE', domicilio: 'Ruta 60 Km 12, Luján de Cuyo', domicilioElectronico: 'caguirre@aguirre-abogados.com.ar' },
+  { vinculo: 'TERCERO', nombre: 'ESTUDIO CONTABLE LATORRE & ASOC.', representante: 'CR. RAÚL LATORRE', domicilio: 'Patricias Mendocinas 460, Mendoza', domicilioElectronico: 'rlatorre@latorre-contadores.com.ar' },
 ];
 
 const movs2: Movimiento[] = [
@@ -170,8 +172,8 @@ const causa2: Causa = {
 
 // === Causa 3: Resolución contractual y daños ===
 const sujetos3: Sujeto[] = [
-  { vinculo: 'ACTOR', nombre: 'CONSTRUCTORA CUYANA S.A.', representante: 'DR. NICOLÁS BUSTOS', domicilio: 'Pedro Molina 750, Mendoza' },
-  { vinculo: 'DEMANDADO', nombre: 'DESARROLLOS URBANOS DEL OESTE S.A.', representante: 'DRA. PATRICIA QUIROGA', domicilio: 'Av. Boulogne Sur Mer 1380, Las Heras' },
+  { vinculo: 'ACTOR', nombre: 'CONSTRUCTORA CUYANA S.A.', representante: 'DR. NICOLÁS BUSTOS', domicilio: 'Pedro Molina 750, Mendoza', domicilioElectronico: 'nbustos@bustos-legal.com.ar' },
+  { vinculo: 'DEMANDADO', nombre: 'DESARROLLOS URBANOS DEL OESTE S.A.', representante: 'DRA. PATRICIA QUIROGA', domicilio: 'Av. Boulogne Sur Mer 1380, Las Heras', domicilioElectronico: 'pquiroga@quiroga-abogados.com.ar' },
 ];
 
 const movs3: Movimiento[] = [
@@ -256,8 +258,24 @@ export function CausasProvider({ children }: { children: React.ReactNode }) {
       })
     );
 
+  const addMovimiento = (causaId: string, nroExp: string, mov: Movimiento) =>
+    setCausas((prev) =>
+      prev.map((c) => {
+        if (c.id !== causaId) return c;
+        return {
+          ...c,
+          ultimoMovimiento: mov.fecha,
+          expedientes: c.expedientes.map((e) =>
+            e.nroExpediente === nroExp
+              ? { ...e, movimientos: [mov, ...e.movimientos], ultimoMovimiento: mov.fecha }
+              : e
+          ),
+        };
+      })
+    );
+
   return (
-    <CausasContext.Provider value={{ causas, getCausa, addCausa, addExpediente, addComentario }}>
+    <CausasContext.Provider value={{ causas, getCausa, addCausa, addExpediente, addComentario, addMovimiento }}>
       {children}
     </CausasContext.Provider>
   );

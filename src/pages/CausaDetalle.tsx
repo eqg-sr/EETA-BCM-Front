@@ -1,34 +1,76 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, ExternalLink, Paperclip, FilePlus, Send, Upload, MessageSquare, Info, Users, ListOrdered, Link2 } from 'lucide-react';
+import { ArrowLeft, Paperclip, FilePlus, Send, Upload, Info, Users, ListOrdered, Link2, Download, Trash2 } from 'lucide-react';
 import Layout from '../components/Layout';
-import { useCausas, type Movimiento, type MovimientoTipo, type Comentario } from '../context/CausasContext';
-import { useAuth, ROLE_LABELS } from '../context/AuthContext';
+import StatusBadge from '../components/StatusBadge';
+import { useCausas, type Movimiento, type MovimientoTipo, type CausaStatus, type Sujeto, type CausaRelacionada } from '../context/CausasContext';
+import { useAuth, usePermissions } from '../context/AuthContext';
+import api from '../services/api';
 
 const SECTIONS = [
-  { id: 'info', label: 'Información General', icon: Info },
-  { id: 'sujetos', label: 'Sujetos', icon: Users },
-  { id: 'movimientos', label: 'Movimientos', icon: ListOrdered },
-  { id: 'relacionadas', label: 'Causas Relacionadas', icon: Link2 },
+  { id: 'info',       label: 'Información General', icon: Info },
+  { id: 'sujetos',    label: 'Sujetos',              icon: Users },
+  { id: 'movimientos',label: 'Movimientos',           icon: ListOrdered },
+  { id: 'relacionadas',label: 'Causas Relacionadas',  icon: Link2 },
 ] as const;
+
+const STATUS_OPTIONS: { value: CausaStatus; label: string }[] = [
+  { value: 'pendiente',  label: 'Pendiente' },
+  { value: 'iniciado',   label: 'Iniciado' },
+  { value: 'en_proceso', label: 'En proceso' },
+  { value: 'cerrado',    label: 'Cerrado' },
+];
 
 export default function CausaDetalle() {
   const { id } = useParams<{ id: string }>();
-  const { getCausa } = useCausas();
-  const causa = id ? getCausa(id) : undefined;
+  const { currentCausa, isLoading, error, fetchCausa, cambiarStatus } = useCausas();
+  const { user } = useAuth();
+  const { isReadOnly } = usePermissions();
+  const isSecretario = user?.role === 'secretario' && !isReadOnly;
 
-  if (!causa) {
+  const [statusLoading, setStatusLoading] = useState(false);
+  const [statusError, setStatusError]     = useState<string | null>(null);
+
+  useEffect(() => {
+    if (id) fetchCausa(id);
+  }, [id]);
+
+  if (isLoading) {
+    return (
+      <Layout>
+        <div className="flex justify-center py-20">
+          <div className="w-8 h-8 border-4 border-slate-200 border-t-[#001f3f] rounded-full animate-spin" />
+        </div>
+      </Layout>
+    );
+  }
+
+  if (error || !currentCausa) {
     return (
       <Layout>
         <Link to="/causas" className="flex items-center gap-2 text-slate-500 hover:text-[#001f3f] text-sm mb-4 w-fit">
           <ArrowLeft size={16} /> Volver al listado
         </Link>
-        <p className="text-slate-500">Expediente no encontrado.</p>
+        <p className="text-slate-500">{error ?? 'Expediente no encontrado.'}</p>
       </Layout>
     );
   }
 
+  const causa = currentCausa;
   const allMovimientos = causa.expedientes.flatMap((e) => e.movimientos);
+
+  const handleStatusChange = async (newStatus: CausaStatus) => {
+    if (!id) return;
+    setStatusLoading(true);
+    setStatusError(null);
+    try {
+      await cambiarStatus(id, newStatus);
+    } catch (e: any) {
+      setStatusError(e.response?.data?.message ?? 'Error al cambiar el estado');
+    } finally {
+      setStatusLoading(false);
+    }
+  };
 
   return (
     <Layout>
@@ -42,6 +84,29 @@ export default function CausaDetalle() {
             {causa.identificador} <span className="text-slate-400">({causa.numeroInterno})</span> {causa.tribunal}
           </div>
           <h1 className="text-xl md:text-2xl font-extrabold text-slate-900 mt-1">{causa.caratula}</h1>
+          <div className="flex items-center gap-3 mt-2 flex-wrap">
+            <StatusBadge status={causa.status} />
+            {isSecretario && (
+              <div className="flex items-center gap-2">
+                <select
+                  value={causa.status}
+                  onChange={(e) => handleStatusChange(e.target.value as CausaStatus)}
+                  disabled={statusLoading}
+                  className="px-3 py-1 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#001f3f]/10 focus:border-[#001f3f] transition-all outline-none text-slate-700 disabled:opacity-50"
+                >
+                  {STATUS_OPTIONS.map((o) => (
+                    <option key={o.value} value={o.value}>{o.label}</option>
+                  ))}
+                </select>
+                {statusLoading && (
+                  <div className="w-4 h-4 border-2 border-slate-200 border-t-[#001f3f] rounded-full animate-spin" />
+                )}
+              </div>
+            )}
+          </div>
+          {statusError && (
+            <p className="mt-1.5 text-xs text-red-600">{statusError}</p>
+          )}
         </div>
         <div className="text-right text-xs">
           <div className="text-slate-400 uppercase font-semibold">Árbitro</div>
@@ -69,14 +134,14 @@ export default function CausaDetalle() {
         <div className="lg:col-span-9 space-y-8">
           <Section id="info" title="Información General" icon={Info}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <InfoRow label="Identificador" value={`${causa.identificador} (${causa.numeroInterno})`} />
-              <InfoRow label="Carátula" value={causa.caratula} />
-              <InfoRow label="Tribunal" value={causa.tribunal} />
-              <InfoRow label="Árbitro" value={causa.arbitro} />
+              <InfoRow label="Identificador"        value={`${causa.identificador} (${causa.numeroInterno})`} />
+              <InfoRow label="Carátula"             value={causa.caratula} />
+              <InfoRow label="Tribunal"             value={causa.tribunal} />
+              <InfoRow label="Árbitro"              value={causa.arbitro} />
               <InfoRow label="Fecha de Presentación" value={causa.fechaPresentacion} />
-              <InfoRow label="Fecha de Inicio" value={causa.fechaInicio} />
-              <InfoRow label="Último Movimiento" value={causa.ultimoMovimiento} />
-              <InfoRow label="Objeto del Juicio" value={causa.objetoJuicio} />
+              <InfoRow label="Fecha de Inicio"      value={causa.fechaInicio} />
+              <InfoRow label="Último Movimiento"    value={causa.ultimoMovimiento} />
+              <InfoRow label="Objeto del Juicio"    value={causa.objetoJuicio} />
             </div>
           </Section>
 
@@ -89,7 +154,11 @@ export default function CausaDetalle() {
           </Section>
 
           <Section id="relacionadas" title="Causas Relacionadas" icon={Link2}>
-            <CausasRelacionadasBlock relacionadas={causa.causasRelacionadas} />
+            <CausasRelacionadasBlock
+              causaId={causa.id}
+              relacionadas={causa.causasRelacionadas}
+              isSecretario={isSecretario}
+            />
           </Section>
         </div>
       </div>
@@ -97,16 +166,12 @@ export default function CausaDetalle() {
   );
 }
 
+// ── Sub-components ─────────────────────────────────────────────────────────────
+
 function Section({
-  id,
-  title,
-  icon: Icon,
-  children,
+  id, title, icon: Icon, children,
 }: {
-  id: string;
-  title: string;
-  icon: typeof Info;
-  children: React.ReactNode;
+  id: string; title: string; icon: typeof Info; children: React.ReactNode;
 }) {
   return (
     <section id={id} className="bg-white rounded-2xl border border-slate-200 shadow-sm scroll-mt-24">
@@ -128,7 +193,7 @@ function InfoRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-function SujetosTable({ sujetos }: { sujetos: ReturnType<typeof useCausas>['causas'][number]['sujetos'] }) {
+function SujetosTable({ sujetos }: { sujetos: Sujeto[] }) {
   return (
     <div className="overflow-x-auto rounded-xl border border-slate-200">
       <table className="w-full text-sm">
@@ -157,160 +222,309 @@ function SujetosTable({ sujetos }: { sujetos: ReturnType<typeof useCausas>['caus
   );
 }
 
-function CausasRelacionadasBlock({ relacionadas }: { relacionadas: ReturnType<typeof useCausas>['causas'][number]['causasRelacionadas'] }) {
-  if (relacionadas.length === 0) {
-    return <p className="text-slate-500 text-sm">No hay causas relacionadas.</p>;
-  }
+const DESCRIPCION_REL_MAX = 500;
+
+function CausasRelacionadasBlock({
+  causaId,
+  relacionadas,
+  isSecretario,
+}: {
+  causaId: string;
+  relacionadas: CausaRelacionada[];
+  isSecretario: boolean;
+}) {
+  const { agregarRelacionada, eliminarRelacionada } = useCausas();
+
+  const [relIdentificador, setRelIdentificador] = useState('');
+  const [relDescripcion, setRelDescripcion]     = useState('');
+  const [relArchivo, setRelArchivo]             = useState<File | null>(null);
+  const [isSending, setIsSending]               = useState(false);
+  const [formError, setFormError]               = useState<string | null>(null);
+  const [deletingId, setDeletingId]             = useState<string | null>(null);
+
+  const handleAgregar = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!relIdentificador.trim() || !relDescripcion.trim()) return;
+    setIsSending(true);
+    setFormError(null);
+    try {
+      await agregarRelacionada(causaId, relIdentificador.trim(), relDescripcion.trim(), relArchivo ?? undefined);
+      setRelIdentificador('');
+      setRelDescripcion('');
+      setRelArchivo(null);
+    } catch (e: any) {
+      setFormError(e.response?.data?.message ?? 'Error al agregar la causa relacionada');
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  const handleEliminar = async (identificador: string) => {
+    setDeletingId(identificador);
+    try {
+      await eliminarRelacionada(causaId, identificador);
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  const handleDescargar = async (rel: CausaRelacionada) => {
+    if (!rel._id) return;
+    try {
+      const response = await api.get(
+        `/causas/${causaId}/relacionadas/${rel._id}/archivo`,
+        { responseType: 'blob' }
+      );
+      const url = URL.createObjectURL(response.data);
+      const a   = document.createElement('a');
+      a.href     = url;
+      a.download = rel.nombreArchivo ?? 'archivo';
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      alert('No se pudo descargar el archivo.');
+    }
+  };
+
   return (
-    <div className="space-y-3">
-      {relacionadas.map((r, i) => (
-        <div key={i} className="bg-slate-50 rounded-xl border border-slate-200 p-4 flex items-center justify-between">
-          <div>
-            <div className="text-sm font-mono text-[#001f3f] font-semibold">{r.identificador}</div>
-            <div className="text-sm font-semibold text-slate-800">{r.caratula}</div>
-            <div className="text-xs text-slate-500 mt-1">{r.tribunal}</div>
-          </div>
-          <ExternalLink size={16} className="text-slate-400" />
+    <div className="space-y-6">
+      {isSecretario && (
+        <div className="bg-slate-50 rounded-2xl border border-slate-200 p-5">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-[#001f3f] mb-3 flex items-center gap-2">
+            <Link2 size={14} className="text-blue-600" />
+            Vincular Causa Relacionada
+          </h3>
+          <form onSubmit={handleAgregar} className="space-y-3">
+            <input
+              value={relIdentificador}
+              onChange={(e) => setRelIdentificador(e.target.value)}
+              placeholder="Identificador de la causa"
+              className="form-input text-sm"
+              required
+            />
+            <div>
+              <textarea
+                value={relDescripcion}
+                onChange={(e) => setRelDescripcion(e.target.value.slice(0, DESCRIPCION_REL_MAX))}
+                placeholder="Descripción de la vinculación"
+                rows={3}
+                required
+                className="form-input text-sm resize-none"
+              />
+              <div className="text-right text-[11px] text-slate-400 mt-1">
+                {relDescripcion.length}/{DESCRIPCION_REL_MAX}
+              </div>
+            </div>
+            <label className="flex items-center gap-2 bg-white border border-dashed border-slate-300 rounded-lg px-3 py-2 cursor-pointer hover:bg-slate-100 transition-colors">
+              <Upload size={14} className="text-[#001f3f]" />
+              <span className="text-xs text-slate-600 truncate">
+                {relArchivo ? relArchivo.name : 'Adjuntar archivo (opcional, PDF/DOC/DOCX/JPG/PNG)'}
+              </span>
+              <input
+                type="file"
+                accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                className="hidden"
+                onChange={(e) => setRelArchivo(e.target.files?.[0] ?? null)}
+              />
+            </label>
+            {formError && <p className="text-xs text-red-600">{formError}</p>}
+            <button
+              type="submit"
+              disabled={!relIdentificador.trim() || !relDescripcion.trim() || isSending}
+              className="w-full flex items-center justify-center gap-2 py-2 bg-[#001f3f] text-white rounded-lg text-xs font-bold hover:bg-[#002d5a] disabled:opacity-50"
+            >
+              <Send size={14} /> {isSending ? 'Vinculando...' : 'Vincular causa'}
+            </button>
+          </form>
         </div>
-      ))}
+      )}
+
+      <div className="overflow-x-auto rounded-xl border border-slate-200">
+        <table className="w-full text-sm">
+          <thead className="bg-slate-50 text-left">
+            <tr className="text-blue-700 text-xs uppercase tracking-wider">
+              <th className="px-4 py-3 font-semibold">Identificador</th>
+              <th className="px-4 py-3 font-semibold">Descripción</th>
+              <th className="px-4 py-3 font-semibold">Archivo</th>
+              <th className="px-4 py-3 font-semibold">Fecha</th>
+              {isSecretario && <th className="px-4 py-3 font-semibold">Acciones</th>}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100">
+            {relacionadas.map((r, i) => (
+              <tr key={r._id ?? i} className="hover:bg-slate-50">
+                <td className="px-4 py-3 font-mono text-[#001f3f] font-semibold whitespace-nowrap">{r.identificador}</td>
+                <td className="px-4 py-3 text-slate-700 max-w-xs">
+                  <div className="line-clamp-3">{r.descripcion}</div>
+                </td>
+                <td className="px-4 py-3">
+                  {r._id && r.nombreArchivo ? (
+                    <button
+                      onClick={() => handleDescargar(r)}
+                      className="flex items-center gap-1 text-xs text-blue-700 hover:underline"
+                    >
+                      <Download size={13} />
+                      {r.nombreArchivo}
+                    </button>
+                  ) : (
+                    <span className="text-slate-400">-</span>
+                  )}
+                </td>
+                <td className="px-4 py-3 text-xs text-slate-500 whitespace-nowrap">
+                  {r.creadoEn ? new Date(r.creadoEn).toLocaleDateString('es-AR') : '-'}
+                </td>
+                {isSecretario && (
+                  <td className="px-4 py-3">
+                    <button
+                      onClick={() => handleEliminar(r.identificador)}
+                      disabled={deletingId === r.identificador}
+                      className="flex items-center gap-1 text-xs text-red-600 hover:text-red-800 disabled:opacity-50"
+                    >
+                      <Trash2 size={13} />
+                      Quitar
+                    </button>
+                  </td>
+                )}
+              </tr>
+            ))}
+            {relacionadas.length === 0 && (
+              <tr>
+                <td colSpan={isSecretario ? 5 : 4} className="px-4 py-10 text-center text-slate-400 text-sm">
+                  No hay causas relacionadas.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
+
+const MOVIMIENTO_TIPO_LABELS: Record<MovimientoTipo, string> = {
+  ACT: 'Actuación',
+  ESC: 'Escrito',
+  CED: 'Cédula',
+  RES: 'Resolución',
+  NOT: 'Notificación',
+  AUD: 'Audiencia',
+  PER: 'Pericia',
+};
+
+const DESCRIPCION_MAX = 2000;
 
 function MovimientosBlock({
   causaId,
   movimientos,
 }: {
   causaId: string;
-  movimientos: ReturnType<typeof useCausas>['causas'][number]['expedientes'][number]['movimientos'];
+  movimientos: Movimiento[];
 }) {
-  const { getCausa, addMovimiento, addComentario } = useCausas();
+  const { currentCausa, agregarMovimiento } = useCausas();
   const { user } = useAuth();
-  const isSecretario = user?.role === 'secretario';
+  const { isReadOnly } = usePermissions();
+  const isSecretario = user?.role === 'secretario' && !isReadOnly;
 
-  const causa = getCausa(causaId);
-  const expediente = causa?.expedientes[0];
+  const expediente = currentCausa?.expedientes[0];
 
-  const [movTipo, setMovTipo] = useState<MovimientoTipo>('ACT');
-  const [movTitulo, setMovTitulo] = useState('');
-  const [movArchivo, setMovArchivo] = useState<File | null>(null);
-  const [comentario, setComentario] = useState('');
+  const [movTipo, setMovTipo]           = useState<MovimientoTipo>('ACT');
+  const [movTitulo, setMovTitulo]       = useState('');
+  const [movDescripcion, setMovDescripcion] = useState('');
+  const [movArchivo, setMovArchivo]     = useState<File | null>(null);
+  const [isSending, setIsSending]       = useState(false);
 
-  const handleCargarMovimiento = (e: React.FormEvent) => {
+  const handleCargarMovimiento = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!movTitulo.trim() || !user || !expediente) return;
-    const prefix = movTipo === 'ACT' ? 'AC' : movTipo === 'ESC' ? 'ES' : movTipo === 'CED' ? 'CD' : 'MV';
-    const mov: Movimiento = {
-      id: `m-${Date.now()}`,
-      fecha: new Date().toLocaleString('es-AR'),
-      tipo: movTipo,
-      titulo: movTitulo.trim(),
-      numero: `${prefix}-2026-${Math.floor(Math.random() * 90000 + 10000)}`,
-      tribunal: 'TRIBUNAL ARBITRAL BCM',
-      presentante: user.name,
-      acceso: movTipo === 'ESC' ? 'Escrito de parte' : 'Resolución',
-      adjuntos: !!movArchivo,
-    };
-    addMovimiento(causaId, expediente.nroExpediente, mov);
-    setMovTipo('ACT');
-    setMovTitulo('');
-    setMovArchivo(null);
-  };
-
-  const handleAgregarComentario = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!comentario.trim() || !user || !expediente) return;
-    const nuevo: Comentario = {
-      id: `c-${Date.now()}`,
-      autor: user.name,
-      rol: ROLE_LABELS[user.role],
-      fecha: new Date().toLocaleString('es-AR'),
-      texto: comentario.trim(),
-    };
-    addComentario(causaId, expediente.nroExpediente, nuevo);
-    setComentario('');
+    if (!movTitulo.trim() || !movDescripcion.trim() || !user || !expediente) return;
+    setIsSending(true);
+    try {
+      const prefix = movTipo === 'ACT' ? 'AC' : movTipo === 'ESC' ? 'ES' : movTipo === 'CED' ? 'CD' : movTipo === 'RES' ? 'RS' : movTipo === 'NOT' ? 'NT' : movTipo === 'AUD' ? 'AU' : 'PE';
+      const mov: Movimiento = {
+        id:          `m-${Date.now()}`,
+        fecha:       new Date().toISOString(),
+        tipo:        movTipo,
+        titulo:      movTitulo.trim(),
+        descripcion: movDescripcion.trim(),
+        numero:      `${prefix}-${new Date().getFullYear()}-${Math.floor(Math.random() * 90000 + 10000)}`,
+        tribunal:    'TRIBUNAL ARBITRAL BCM',
+        presentante: user.name,
+        acceso:      movTipo === 'ESC' ? 'Escrito de parte' : 'Resolución',
+        adjuntos:    !!movArchivo,
+      };
+      await agregarMovimiento(causaId, expediente.nroExpediente, mov);
+      setMovTipo('ACT');
+      setMovTitulo('');
+      setMovDescripcion('');
+      setMovArchivo(null);
+    } finally {
+      setIsSending(false);
+    }
   };
 
   return (
     <div className="space-y-6">
       {isSecretario && expediente && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <div className="bg-slate-50 rounded-2xl border border-slate-200 p-5">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-[#001f3f] mb-3 flex items-center gap-2">
-              <FilePlus size={14} className="text-blue-600" />
-              Cargar Movimiento
-            </h3>
-            <form onSubmit={handleCargarMovimiento} className="space-y-3">
-              <div className="grid grid-cols-12 gap-2">
-                <div className="col-span-4">
-                  <select
-                    value={movTipo}
-                    onChange={(e) => setMovTipo(e.target.value as MovimientoTipo)}
-                    className="form-input text-sm"
-                  >
-                    <option value="ACT">Actuación</option>
-                    <option value="ESC">Escrito</option>
-                    <option value="CED">Cédula</option>
-                    <option value="MOV">Movimiento</option>
-                  </select>
-                </div>
-                <div className="col-span-8">
-                  <input
-                    value={movTitulo}
-                    onChange={(e) => setMovTitulo(e.target.value)}
-                    placeholder="Título / descripción"
-                    className="form-input text-sm"
-                    required
-                  />
-                </div>
+        <div className="bg-slate-50 rounded-2xl border border-slate-200 p-5">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-[#001f3f] mb-3 flex items-center gap-2">
+            <FilePlus size={14} className="text-blue-600" />
+            Cargar Movimiento
+          </h3>
+          <form onSubmit={handleCargarMovimiento} className="space-y-3">
+            <div className="grid grid-cols-12 gap-2">
+              <div className="col-span-4">
+                <select
+                  value={movTipo}
+                  onChange={(e) => setMovTipo(e.target.value as MovimientoTipo)}
+                  className="form-input text-sm"
+                >
+                  {(Object.keys(MOVIMIENTO_TIPO_LABELS) as MovimientoTipo[]).map((t) => (
+                    <option key={t} value={t}>{MOVIMIENTO_TIPO_LABELS[t]}</option>
+                  ))}
+                </select>
               </div>
-              <label className="flex items-center gap-2 bg-white border border-dashed border-slate-300 rounded-lg px-3 py-2 cursor-pointer hover:bg-slate-100 transition-colors">
-                <Upload size={14} className="text-[#001f3f]" />
-                <span className="text-xs text-slate-600 truncate">
-                  {movArchivo ? movArchivo.name : 'Adjuntar PDF (opcional)'}
-                </span>
+              <div className="col-span-8">
                 <input
-                  type="file"
-                  accept=".pdf"
-                  className="hidden"
-                  onChange={(e) => setMovArchivo(e.target.files?.[0] ?? null)}
+                  value={movTitulo}
+                  onChange={(e) => setMovTitulo(e.target.value)}
+                  placeholder="Título / descripción"
+                  className="form-input text-sm"
+                  required
                 />
-              </label>
-              <button
-                type="submit"
-                disabled={!movTitulo.trim()}
-                className="w-full flex items-center justify-center gap-2 py-2 bg-[#001f3f] text-white rounded-lg text-xs font-bold hover:bg-[#002d5a] disabled:opacity-50"
-              >
-                <Send size={14} /> Registrar movimiento
-              </button>
-            </form>
-          </div>
-
-          <div className="bg-slate-50 rounded-2xl border border-slate-200 p-5">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-[#001f3f] mb-3 flex items-center gap-2">
-              <MessageSquare size={14} className="text-blue-600" />
-              Agregar Comentario
-            </h3>
-            <form onSubmit={handleAgregarComentario} className="space-y-3">
+              </div>
+            </div>
+            <div>
               <textarea
-                value={comentario}
-                onChange={(e) => setComentario(e.target.value)}
-                rows={4}
-                placeholder="Escribir un comentario interno..."
+                value={movDescripcion}
+                onChange={(e) => setMovDescripcion(e.target.value.slice(0, DESCRIPCION_MAX))}
+                placeholder="Descripción del movimiento"
+                rows={3}
+                required
                 className="form-input text-sm resize-none"
               />
-              <p className="text-[11px] text-slate-400 italic">
-                El comentario se registra como movimiento del expediente.
-              </p>
-              <button
-                type="submit"
-                disabled={!comentario.trim()}
-                className="w-full flex items-center justify-center gap-2 py-2 bg-[#001f3f] text-white rounded-lg text-xs font-bold hover:bg-[#002d5a] disabled:opacity-50"
-              >
-                <Send size={14} /> Agregar comentario
-              </button>
-            </form>
-          </div>
+              <div className="text-right text-[11px] text-slate-400 mt-1">
+                {movDescripcion.length}/{DESCRIPCION_MAX}
+              </div>
+            </div>
+            <label className="flex items-center gap-2 bg-white border border-dashed border-slate-300 rounded-lg px-3 py-2 cursor-pointer hover:bg-slate-100 transition-colors">
+              <Upload size={14} className="text-[#001f3f]" />
+              <span className="text-xs text-slate-600 truncate">
+                {movArchivo ? movArchivo.name : 'Adjuntar PDF (opcional)'}
+              </span>
+              <input
+                type="file"
+                accept=".pdf"
+                className="hidden"
+                onChange={(e) => setMovArchivo(e.target.files?.[0] ?? null)}
+              />
+            </label>
+            <button
+              type="submit"
+              disabled={!movTitulo.trim() || !movDescripcion.trim() || isSending}
+              className="w-full flex items-center justify-center gap-2 py-2 bg-[#001f3f] text-white rounded-lg text-xs font-bold hover:bg-[#002d5a] disabled:opacity-50"
+            >
+              <Send size={14} /> {isSending ? 'Registrando...' : 'Registrar movimiento'}
+            </button>
+          </form>
         </div>
       )}
 
@@ -329,7 +543,12 @@ function MovimientosBlock({
             {movimientos.map((m) => (
               <tr key={m.id} className="hover:bg-slate-50">
                 <td className="px-4 py-3 text-slate-700 whitespace-nowrap">{m.fecha}</td>
-                <td className="px-4 py-3 text-slate-800">{m.titulo}</td>
+                <td className="px-4 py-3">
+                  <div className="text-slate-800 font-medium">{m.titulo}</div>
+                  {m.descripcion && (
+                    <div className="text-xs text-slate-500 mt-0.5 leading-relaxed">{m.descripcion}</div>
+                  )}
+                </td>
                 <td className="px-4 py-3 text-slate-600 text-xs">
                   Origen: TRIBUNAL ARBITRAL BCM - Destino: {m.tribunal ?? 'TRIBUNAL ARBITRAL BCM'}
                 </td>

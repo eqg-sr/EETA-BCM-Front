@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { User, LogOut, Folder } from 'lucide-react';
+import { User, LogOut, Folder, Shield } from 'lucide-react';
 import logo from '../assets/logo-header.png';
 import { useAuth, ROLE_LABELS } from '../context/AuthContext';
 
@@ -45,6 +45,17 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 <Folder size={16} />
                 Inicio
               </Link>
+              {user.role === 'secretario' && (
+                <Link
+                  to="/admin"
+                  className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
+                    isActive('/admin') ? 'bg-white/15 text-white' : 'text-white/70 hover:bg-white/10 hover:text-white'
+                  }`}
+                >
+                  <Shield size={16} />
+                  Admin
+                </Link>
+              )}
             </nav>
           )}
         </div>

@@ -1,14 +1,15 @@
-import { useEffect, useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, Paperclip, FilePlus, Send, Upload, Info, Users, ListOrdered, Link2, Download, Trash2 } from 'lucide-react';
+import { ArrowLeft, Paperclip, FilePlus, Send, Upload, Info, Users, ListOrdered, Link2, Download, Trash2, FolderOpen, ChevronDown, ChevronRight, UserPlus, X, Search, Loader2 } from 'lucide-react';
 import Layout from '../components/Layout';
 import StatusBadge from '../components/StatusBadge';
-import { useCausas, type Movimiento, type MovimientoTipo, type CausaStatus, type Sujeto, type CausaRelacionada } from '../context/CausasContext';
+import { useCausas, type Movimiento, type MovimientoTipo, type CausaStatus, type Sujeto, type CausaRelacionada, type Expediente } from '../context/CausasContext';
 import { useAuth, usePermissions } from '../context/AuthContext';
 import api from '../services/api';
 
 const SECTIONS = [
   { id: 'info',       label: 'Información General', icon: Info },
+  { id: 'expedientes',label: 'Expedientes',          icon: FolderOpen },
   { id: 'sujetos',    label: 'Sujetos',              icon: Users },
   { id: 'movimientos',label: 'Movimientos',           icon: ListOrdered },
   { id: 'relacionadas',label: 'Causas Relacionadas',  icon: Link2 },
@@ -27,6 +28,7 @@ export default function CausaDetalle() {
   const { user } = useAuth();
   const { isReadOnly } = usePermissions();
   const isSecretario = user?.role === 'secretario' && !isReadOnly;
+  const isActor = user?.role === 'actor' && !isReadOnly;
 
   const [statusLoading, setStatusLoading] = useState(false);
   const [statusError, setStatusError]     = useState<string | null>(null);
@@ -145,6 +147,15 @@ export default function CausaDetalle() {
             </div>
           </Section>
 
+          <Section id="expedientes" title="Expedientes" icon={FolderOpen}>
+            <ExpedientesBlock
+              causaId={causa.id}
+              expedientes={causa.expedientes}
+              isSecretario={isSecretario}
+              isActor={isActor}
+            />
+          </Section>
+
           <Section id="sujetos" title="Sujetos" icon={Users}>
             <SujetosTable sujetos={causa.sujetos} />
           </Section>
@@ -218,6 +229,289 @@ function SujetosTable({ sujetos }: { sujetos: Sujeto[] }) {
           ))}
         </tbody>
       </table>
+    </div>
+  );
+}
+
+type UsuarioBusqueda = {
+  _id: string;
+  name: string;
+  email: string;
+  role: string;
+};
+
+function ExpedientesBlock({
+  causaId,
+  expedientes,
+  isSecretario,
+  isActor,
+}: {
+  causaId: string;
+  expedientes: Expediente[];
+  isSecretario: boolean;
+  isActor: boolean;
+}) {
+  const { agregarExpediente, eliminarExpediente } = useCausas();
+  const canCreate = isSecretario || isActor;
+
+  const [expandedExp, setExpandedExp] = useState<string | null>(null);
+  const [deletingExp, setDeletingExp] = useState<string | null>(null);
+
+  const [nroExpediente, setNroExpediente] = useState('');
+  const [caratula, setCaratula]           = useState('');
+  const [objetoJuicio, setObjetoJuicio]   = useState('');
+  const [fechaInicio, setFechaInicio]     = useState('');
+  const [montoDisputa, setMontoDisputa]   = useState('');
+  const [asignados, setAsignados]         = useState<UsuarioBusqueda[]>([]);
+  const [userSearch, setUserSearch]       = useState('');
+  const [userResults, setUserResults]     = useState<UsuarioBusqueda[]>([]);
+  const [userSearchLoading, setUserSearchLoading] = useState(false);
+  const [isSending, setIsSending]         = useState(false);
+  const [formError, setFormError]         = useState<string | null>(null);
+
+  const handleUserSearch = (q: string) => {
+    setUserSearch(q);
+    if (!q.trim()) { setUserResults([]); return; }
+    setUserSearchLoading(true);
+    api.get<UsuarioBusqueda[]>('/admin/usuarios', { params: { search: q } })
+      .then(({ data }) => setUserResults(data))
+      .catch(() => setUserResults([]))
+      .finally(() => setUserSearchLoading(false));
+  };
+
+  const addAsignado = (u: UsuarioBusqueda) => {
+    if (!asignados.some((a) => a._id === u._id)) {
+      setAsignados((prev) => [...prev, u]);
+    }
+    setUserSearch('');
+    setUserResults([]);
+  };
+
+  const removeAsignado = (id: string) => {
+    setAsignados((prev) => prev.filter((a) => a._id !== id));
+  };
+
+  const handleAgregar = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!nroExpediente.trim() || !caratula.trim() || !objetoJuicio.trim() || !fechaInicio) return;
+    setIsSending(true);
+    setFormError(null);
+    try {
+      const now = new Date().toISOString();
+      const fechaInicioISO = new Date(fechaInicio).toISOString();
+      await agregarExpediente(causaId, {
+        nroExpediente:     nroExpediente.trim(),
+        caratula:          caratula.trim(),
+        fechaPresentacion: now,
+        fechaInicio:       fechaInicioISO,
+        ultimoMovimiento:  fechaInicioISO,
+        objetoJuicio:      objetoJuicio.trim(),
+        montoDisputa:      montoDisputa.trim() || undefined,
+        asignados:         asignados.map((a) => a._id),
+      });
+      setNroExpediente('');
+      setCaratula('');
+      setObjetoJuicio('');
+      setFechaInicio('');
+      setMontoDisputa('');
+      setAsignados([]);
+    } catch (e: any) {
+      setFormError(e.response?.data?.message ?? 'Error al agregar el expediente');
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  const handleEliminar = async (nro: string) => {
+    setDeletingExp(nro);
+    try {
+      await eliminarExpediente(causaId, nro);
+    } finally {
+      setDeletingExp(null);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      {canCreate && (
+        <div className="bg-slate-50 rounded-2xl border border-slate-200 p-5">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-[#001f3f] mb-3 flex items-center gap-2">
+            <FolderOpen size={14} className="text-blue-600" />
+            Agregar Expediente
+          </h3>
+          <form onSubmit={handleAgregar} className="space-y-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+              <input
+                value={nroExpediente}
+                onChange={(e) => setNroExpediente(e.target.value)}
+                placeholder="Número de expediente"
+                className="form-input text-sm"
+                required
+              />
+              <input
+                type="date"
+                value={fechaInicio}
+                onChange={(e) => setFechaInicio(e.target.value)}
+                className="form-input text-sm"
+                required
+              />
+            </div>
+            <input
+              value={caratula}
+              onChange={(e) => setCaratula(e.target.value)}
+              placeholder="Carátula"
+              className="form-input text-sm"
+              required
+            />
+            <textarea
+              value={objetoJuicio}
+              onChange={(e) => setObjetoJuicio(e.target.value)}
+              placeholder="Objeto del juicio"
+              rows={3}
+              required
+              className="form-input text-sm resize-none"
+            />
+            <input
+              value={montoDisputa}
+              onChange={(e) => setMontoDisputa(e.target.value)}
+              placeholder="Monto en disputa (opcional)"
+              className="form-input text-sm"
+            />
+
+            {isSecretario && (
+              <div className="relative">
+                <p className="text-[11px] uppercase tracking-wider text-slate-400 font-semibold mb-1.5">
+                  Usuarios asignados
+                </p>
+                {asignados.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mb-2">
+                    {asignados.map((a) => (
+                      <span key={a._id} className="flex items-center gap-1 bg-white border border-slate-200 rounded-full pl-2.5 pr-1 py-1 text-xs text-slate-700">
+                        {a.name}
+                        <button type="button" onClick={() => removeAsignado(a._id)} className="text-slate-400 hover:text-red-600">
+                          <X size={12} />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+                <div className="relative">
+                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input
+                    type="text"
+                    value={userSearch}
+                    onChange={(e) => handleUserSearch(e.target.value)}
+                    placeholder="Buscar usuario por nombre o email..."
+                    className="form-input text-sm pl-8"
+                  />
+                  {userSearchLoading && (
+                    <Loader2 size={14} className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin text-slate-400" />
+                  )}
+                </div>
+                {userResults.length > 0 && (
+                  <div className="absolute z-10 mt-1 w-full bg-white border border-slate-200 rounded-xl shadow-lg overflow-hidden">
+                    {userResults.map((u) => (
+                      <button
+                        key={u._id}
+                        type="button"
+                        onClick={() => addAsignado(u)}
+                        className="w-full text-left px-4 py-2.5 hover:bg-slate-50 border-b border-slate-100 last:border-0 transition-colors flex items-center justify-between"
+                      >
+                        <div>
+                          <span className="text-sm font-medium text-slate-800">{u.name}</span>
+                          <span className="text-xs text-slate-400 ml-2">{u.email}</span>
+                        </div>
+                        <span className="flex items-center gap-1 text-xs text-blue-600 font-semibold">
+                          <UserPlus size={13} /> Agregar
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {formError && <p className="text-xs text-red-600">{formError}</p>}
+            <button
+              type="submit"
+              disabled={!nroExpediente.trim() || !caratula.trim() || !objetoJuicio.trim() || !fechaInicio || isSending}
+              className="w-full flex items-center justify-center gap-2 py-2 bg-[#001f3f] text-white rounded-lg text-xs font-bold hover:bg-[#002d5a] disabled:opacity-50"
+            >
+              <Send size={14} /> {isSending ? 'Agregando...' : 'Agregar expediente'}
+            </button>
+          </form>
+        </div>
+      )}
+
+      <div className="overflow-x-auto rounded-xl border border-slate-200">
+        <table className="w-full text-sm">
+          <thead className="bg-slate-50 text-left">
+            <tr className="text-blue-700 text-xs uppercase tracking-wider">
+              <th className="px-4 py-3 font-semibold">Nº Expediente</th>
+              <th className="px-4 py-3 font-semibold">Objeto del Juicio</th>
+              <th className="px-4 py-3 font-semibold">Fecha de Inicio</th>
+              {isSecretario && <th className="px-4 py-3 font-semibold">Acciones</th>}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100">
+            {expedientes.map((exp) => {
+              const isExpanded = expandedExp === exp.nroExpediente;
+              return (
+                <Fragment key={exp.nroExpediente}>
+                  <tr
+                    className="hover:bg-slate-50 cursor-pointer"
+                    onClick={() => setExpandedExp(isExpanded ? null : exp.nroExpediente)}
+                  >
+                    <td className="px-4 py-3 font-mono text-[#001f3f] font-semibold whitespace-nowrap">
+                      <div className="flex items-center gap-1.5">
+                        {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                        {exp.nroExpediente}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-slate-700 max-w-md">
+                      <div className="line-clamp-2">{exp.objetoJuicio}</div>
+                    </td>
+                    <td className="px-4 py-3 text-xs text-slate-500 whitespace-nowrap">{exp.fechaInicio}</td>
+                    {isSecretario && (
+                      <td className="px-4 py-3">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleEliminar(exp.nroExpediente); }}
+                          disabled={deletingExp === exp.nroExpediente}
+                          className="flex items-center gap-1 text-xs text-red-600 hover:text-red-800 disabled:opacity-50"
+                        >
+                          <Trash2 size={13} />
+                          Eliminar
+                        </button>
+                      </td>
+                    )}
+                  </tr>
+                  {isExpanded && (
+                    <tr>
+                      <td colSpan={isSecretario ? 4 : 3} className="px-4 py-4 bg-slate-50">
+                        <p className="text-[11px] uppercase tracking-wider text-slate-400 font-semibold mb-2">
+                          Sujetos del expediente
+                        </p>
+                        {exp.sujetos.length > 0 ? (
+                          <SujetosTable sujetos={exp.sujetos} />
+                        ) : (
+                          <p className="text-slate-400 text-sm">Sin sujetos asignados.</p>
+                        )}
+                      </td>
+                    </tr>
+                  )}
+                </Fragment>
+              );
+            })}
+            {expedientes.length === 0 && (
+              <tr>
+                <td colSpan={isSecretario ? 4 : 3} className="px-4 py-10 text-center text-slate-400 text-sm">
+                  Sin expedientes registrados.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

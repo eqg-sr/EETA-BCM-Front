@@ -49,6 +49,18 @@ export type Expediente = {
   movimientos: Movimiento[];
   comentarios: Comentario[];
   adjuntoNombre?: string;
+  asignados?: string[];
+};
+
+export type NuevoExpediente = {
+  nroExpediente: string;
+  caratula: string;
+  fechaPresentacion: string;
+  fechaInicio: string;
+  ultimoMovimiento: string;
+  objetoJuicio: string;
+  montoDisputa?: string;
+  asignados?: string[];
 };
 
 export type CausaRelacionada = {
@@ -119,6 +131,8 @@ type CausasContextType = {
   agregarSujeto: (causaId: string, expNro: string, data: Sujeto) => Promise<void>;
   agregarRelacionada: (causaId: string, identificador: string, descripcion: string, archivo?: File) => Promise<void>;
   eliminarRelacionada: (causaId: string, identificador: string) => Promise<void>;
+  agregarExpediente: (causaId: string, data: NuevoExpediente) => Promise<void>;
+  eliminarExpediente: (causaId: string, nroExpediente: string) => Promise<void>;
 };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -248,11 +262,22 @@ export function CausasProvider({ children }: { children: React.ReactNode }) {
     await fetchCausa(causaId);
   };
 
+  const agregarExpediente = async (causaId: string, data: NuevoExpediente) => {
+    await api.post(`/causas/${causaId}/expedientes`, data);
+    await fetchCausa(causaId);
+  };
+
+  const eliminarExpediente = async (causaId: string, nroExpediente: string) => {
+    await api.delete(`/causas/${causaId}/expedientes/${encodeURIComponent(nroExpediente)}`);
+    await fetchCausa(causaId);
+  };
+
   return (
     <CausasContext.Provider value={{
       causas, currentCausa, isLoading, error,
       fetchCausas, fetchCausa, crearCausa, actualizarCausa, eliminarCausa, cambiarStatus,
       agregarMovimiento, agregarSujeto, agregarRelacionada, eliminarRelacionada,
+      agregarExpediente, eliminarExpediente,
     }}>
       {children}
     </CausasContext.Provider>

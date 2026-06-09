@@ -68,7 +68,7 @@ function UsuariosTab() {
   const aprobar    = (id: string) => withLoading(id, () => api.put(`/admin/usuarios/${id}/aprobar`));
   const activar    = (id: string) => withLoading(id, () => api.put(`/admin/usuarios/${id}/activar`));
   const desactivar = (id: string) => withLoading(id, () => api.put(`/admin/usuarios/${id}/desactivar`));
-  const cambiarRol = (id: string, role: Role) => withLoading(id, () => api.put(`/admin/usuarios/${id}/rol`, { role }));
+  const cambiarRol = (id: string, role: Role) => withLoading(id, () => api.put(`/admin/usuarios/${id}/rol`, { rol: role }));
 
   const displayed = showPending ? users.filter((u) => !u.aprobado) : users;
 

@@ -69,7 +69,8 @@ export default function NuevaCausa() {
         objetoJuicio,
         sujetos:           sujetos.filter((s) => s.nombre.trim().length > 0),
         expedientes:       [],
-        causasRelacionadas:[],
+        causasRelacionadas:[], 
+	status:'pendiente',
       });
       navigate(`/causas/${causa.id}`);
     } catch {

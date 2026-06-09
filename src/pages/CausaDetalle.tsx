@@ -3,7 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft, Paperclip, FilePlus, Send, Upload, Info, Users, ListOrdered, Link2, Download, Trash2, FolderOpen, ChevronDown, ChevronRight, UserPlus, X, Search, Loader2 } from 'lucide-react';
 import Layout from '../components/Layout';
 import StatusBadge from '../components/StatusBadge';
-import { useCausas, type Movimiento, type MovimientoTipo, type CausaStatus, type Sujeto, type CausaRelacionada, type Expediente } from '../context/CausasContext';
+import { useCausas, type Movimiento, type MovimientoTipo, type CausaStatus, type Sujeto, type SujetoVinculo, type CausaRelacionada, type Expediente } from '../context/CausasContext';
 import { useAuth, usePermissions } from '../context/AuthContext';
 import api from '../services/api';
 
@@ -14,6 +14,12 @@ const SECTIONS = [
   { id: 'movimientos',label: 'Movimientos',           icon: ListOrdered },
   { id: 'relacionadas',label: 'Causas Relacionadas',  icon: Link2 },
 ] as const;
+
+const SUJETO_VINCULO_OPTIONS: { value: SujetoVinculo; label: string }[] = [
+  { value: 'ACTOR',     label: 'Actor' },
+  { value: 'DEMANDADO', label: 'Demandado' },
+  { value: 'TERCERO',   label: 'Tercero' },
+];
 
 const STATUS_OPTIONS: { value: CausaStatus; label: string }[] = [
   { value: 'pendiente',  label: 'Pendiente' },
@@ -251,11 +257,19 @@ function ExpedientesBlock({
   isSecretario: boolean;
   isActor: boolean;
 }) {
-  const { agregarExpediente, eliminarExpediente } = useCausas();
+  const { agregarExpediente, eliminarExpediente, agregarSujeto } = useCausas();
   const canCreate = isSecretario || isActor;
 
   const [expandedExp, setExpandedExp] = useState<string | null>(null);
   const [deletingExp, setDeletingExp] = useState<string | null>(null);
+
+  const [sujVinculo, setSujVinculo]                 = useState<SujetoVinculo>('ACTOR');
+  const [sujNombre, setSujNombre]                   = useState('');
+  const [sujRepresentante, setSujRepresentante]     = useState('');
+  const [sujDomicilio, setSujDomicilio]             = useState('');
+  const [sujDomicilioElectronico, setSujDomicilioElectronico] = useState('');
+  const [isSendingSujeto, setIsSendingSujeto]       = useState(false);
+  const [sujetoError, setSujetoError]               = useState<string | null>(null);
 
   const [nroExpediente, setNroExpediente] = useState('');
   const [caratula, setCaratula]           = useState('');
@@ -328,6 +342,31 @@ function ExpedientesBlock({
       await eliminarExpediente(causaId, nro);
     } finally {
       setDeletingExp(null);
+    }
+  };
+
+  const handleAgregarSujeto = async (e: React.FormEvent, nroExpediente: string) => {
+    e.preventDefault();
+    if (!sujNombre.trim()) return;
+    setIsSendingSujeto(true);
+    setSujetoError(null);
+    try {
+      await agregarSujeto(causaId, nroExpediente, {
+        vinculo:              sujVinculo,
+        nombre:               sujNombre.trim(),
+        representante:        sujRepresentante.trim() || undefined,
+        domicilio:            sujDomicilio.trim() || undefined,
+        domicilioElectronico: sujDomicilioElectronico.trim() || undefined,
+      });
+      setSujVinculo('ACTOR');
+      setSujNombre('');
+      setSujRepresentante('');
+      setSujDomicilio('');
+      setSujDomicilioElectronico('');
+    } catch (err: any) {
+      setSujetoError(err.response?.data?.message ?? 'Error al agregar el sujeto');
+    } finally {
+      setIsSendingSujeto(false);
     }
   };
 
@@ -495,6 +534,64 @@ function ExpedientesBlock({
                           <SujetosTable sujetos={exp.sujetos} />
                         ) : (
                           <p className="text-slate-400 text-sm">Sin sujetos asignados.</p>
+                        )}
+
+                        {isSecretario && (
+                          <form
+                            onSubmit={(e) => handleAgregarSujeto(e, exp.nroExpediente)}
+                            onClick={(e) => e.stopPropagation()}
+                            className="mt-4 space-y-2 bg-white rounded-xl border border-slate-200 p-4"
+                          >
+                            <p className="text-[11px] uppercase tracking-wider text-slate-400 font-semibold">
+                              Agregar sujeto
+                            </p>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                              <select
+                                value={sujVinculo}
+                                onChange={(e) => setSujVinculo(e.target.value as SujetoVinculo)}
+                                className="form-input text-sm"
+                              >
+                                {SUJETO_VINCULO_OPTIONS.map((o) => (
+                                  <option key={o.value} value={o.value}>{o.label}</option>
+                                ))}
+                              </select>
+                              <input
+                                value={sujNombre}
+                                onChange={(e) => setSujNombre(e.target.value)}
+                                placeholder="Nombre / Denominación"
+                                className="form-input text-sm"
+                                required
+                              />
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                              <input
+                                value={sujRepresentante}
+                                onChange={(e) => setSujRepresentante(e.target.value)}
+                                placeholder="Representante (opcional)"
+                                className="form-input text-sm"
+                              />
+                              <input
+                                value={sujDomicilio}
+                                onChange={(e) => setSujDomicilio(e.target.value)}
+                                placeholder="Domicilio (opcional)"
+                                className="form-input text-sm"
+                              />
+                              <input
+                                value={sujDomicilioElectronico}
+                                onChange={(e) => setSujDomicilioElectronico(e.target.value)}
+                                placeholder="Domicilio electrónico (opcional)"
+                                className="form-input text-sm"
+                              />
+                            </div>
+                            {sujetoError && <p className="text-xs text-red-600">{sujetoError}</p>}
+                            <button
+                              type="submit"
+                              disabled={!sujNombre.trim() || isSendingSujeto}
+                              className="flex items-center justify-center gap-2 px-4 py-2 bg-[#001f3f] text-white rounded-lg text-xs font-bold hover:bg-[#002d5a] disabled:opacity-50"
+                            >
+                              <UserPlus size={14} /> {isSendingSujeto ? 'Agregando...' : 'Agregar sujeto'}
+                            </button>
+                          </form>
                         )}
                       </td>
                     </tr>

@@ -5,7 +5,7 @@ import { AlertCircle, Search, UserPlus, UserMinus, Users, Link2, Loader2 } from 
 import { ROLE_LABELS, type Role } from '../context/AuthContext';
 
 type AdminUser = {
-  id: string;
+  _id: string;
   name: string;
   email: string;
   role: Role;
@@ -21,7 +21,7 @@ type CausaResult = {
 };
 
 type AssignedUser = {
-  id: string;
+  _id: string;
   name: string;
   email: string;
   role: Role;
@@ -125,14 +125,14 @@ function UsuariosTab() {
               </tr>
             )}
             {displayed.map((u) => (
-              <tr key={u.id} className="hover:bg-slate-50">
+              <tr key={u._id} className="hover:bg-slate-50">
                 <td className="px-4 py-3 font-medium text-slate-800">{u.name}</td>
                 <td className="px-4 py-3 text-slate-600 font-mono text-xs">{u.email}</td>
                 <td className="px-4 py-3">
                   <select
                     value={u.role}
-                    disabled={actionLoading[u.id]}
-                    onChange={(e) => cambiarRol(u.id, e.target.value as Role)}
+                    disabled={actionLoading[u._id]}
+                    onChange={(e) => cambiarRol(u._id, e.target.value as Role)}
                     className="text-xs border border-slate-200 rounded-lg px-2 py-1 bg-white text-slate-700 focus:outline-none focus:border-[#001f3f]"
                   >
                     {ASSIGNABLE_ROLES.map((r) => (
@@ -158,24 +158,24 @@ function UsuariosTab() {
                     {!u.aprobado && (
                       <ActionBtn
                         label="Aprobar"
-                        loading={actionLoading[u.id]}
+                        loading={actionLoading[u._id]}
                         className="bg-blue-600 hover:bg-blue-700 text-white"
-                        onClick={() => aprobar(u.id)}
+                        onClick={() => aprobar(u._id)}
                       />
                     )}
                     {u.activo ? (
                       <ActionBtn
                         label="Desactivar"
-                        loading={actionLoading[u.id]}
+                        loading={actionLoading[u._id]}
                         className="bg-red-100 hover:bg-red-200 text-red-700"
-                        onClick={() => desactivar(u.id)}
+                        onClick={() => desactivar(u._id)}
                       />
                     ) : (
                       <ActionBtn
                         label="Activar"
-                        loading={actionLoading[u.id]}
+                        loading={actionLoading[u._id]}
                         className="bg-green-100 hover:bg-green-200 text-green-700"
-                        onClick={() => activar(u.id)}
+                        onClick={() => activar(u._id)}
                       />
                     )}
                   </div>
@@ -366,13 +366,13 @@ function AsignacionesTab() {
                     ) : (
                       <div className="space-y-1">
                         {(asignados[exp.nroExpediente] ?? []).map((u) => (
-                          <div key={u.id} className="flex items-center justify-between bg-white rounded-lg border border-slate-200 px-3 py-2">
+                          <div key={u._id} className="flex items-center justify-between bg-white rounded-lg border border-slate-200 px-3 py-2">
                             <div>
                               <span className="text-sm font-medium text-slate-800">{u.name}</span>
                               <span className="text-xs text-slate-400 ml-2">{ROLE_LABELS[u.role]}</span>
                             </div>
                             <button
-                              onClick={() => quitarUsuario(selectedCausa.id, exp.nroExpediente, u.id)}
+                              onClick={() => quitarUsuario(selectedCausa.id, exp.nroExpediente, u._id)}
                               className="flex items-center gap-1 px-2 py-1 text-xs font-semibold text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                             >
                               <UserMinus size={13} /> Quitar
@@ -402,8 +402,8 @@ function AsignacionesTab() {
                       <div className="absolute z-10 mt-1 w-full bg-white border border-slate-200 rounded-xl shadow-lg overflow-hidden">
                         {(userResults[exp.nroExpediente] ?? []).map((u) => (
                           <button
-                            key={u.id}
-                            onClick={() => agregarUsuario(selectedCausa.id, exp.nroExpediente, u.id)}
+                            key={u._id}
+                            onClick={() => agregarUsuario(selectedCausa.id, exp.nroExpediente, u._id)}
                             className="w-full text-left px-4 py-2.5 hover:bg-slate-50 border-b border-slate-100 last:border-0 transition-colors flex items-center justify-between"
                           >
                             <div>

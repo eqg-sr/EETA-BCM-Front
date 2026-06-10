@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, Paperclip, FilePlus, Send, Upload, Info, Users, ListOrdered, Link2, Download, Trash2, FolderOpen, ChevronDown, ChevronRight, UserPlus, X, Search, Loader2, FileText } from 'lucide-react';
+import { ArrowLeft, Paperclip, FilePlus, Send, Upload, Info, Users, ListOrdered, Link2, Download, Trash2, FolderOpen, ChevronDown, ChevronRight, UserPlus, UserMinus, X, Search, Loader2, FileText } from 'lucide-react';
 import Layout from '../components/Layout';
 import StatusBadge from '../components/StatusBadge';
 import { useCausas, type Movimiento, type NuevoMovimiento, type MovimientoTipo, type CausaStatus, type Sujeto, type SujetoVinculo, type CausaRelacionada, type Expediente } from '../context/CausasContext';
@@ -409,6 +409,64 @@ function ExpedientesBlock({
   const [isSending, setIsSending]         = useState(false);
   const [formError, setFormError]         = useState<string | null>(null);
 
+  const [asignadosPorExp, setAsignadosPorExp]         = useState<Record<string, UsuarioBusqueda[]>>({});
+  const [asigLoading, setAsigLoading]                 = useState<Record<string, boolean>>({});
+  const [userSearchAsig, setUserSearchAsig]           = useState<Record<string, string>>({});
+  const [userResultsAsig, setUserResultsAsig]         = useState<Record<string, UsuarioBusqueda[]>>({});
+  const [userSearchLoadingAsig, setUserSearchLoadingAsig] = useState<Record<string, boolean>>({});
+
+  const fetchAsignados = async (nro: string) => {
+    setAsigLoading((prev) => ({ ...prev, [nro]: true }));
+    try {
+      const { data } = await api.get<UsuarioBusqueda[]>(`/admin/causas/${causaId}/expedientes/${nro}/asignados`);
+      setAsignadosPorExp((prev) => ({ ...prev, [nro]: data }));
+    } catch {
+      setAsignadosPorExp((prev) => ({ ...prev, [nro]: [] }));
+    } finally {
+      setAsigLoading((prev) => ({ ...prev, [nro]: false }));
+    }
+  };
+
+  const toggleExpand = (nro: string) => {
+    const next = expandedExp === nro ? null : nro;
+    setExpandedExp(next);
+    if (next && isSecretario && !asignadosPorExp[next]) {
+      fetchAsignados(next);
+    }
+  };
+
+  const handleUserSearchAsig = (nro: string, q: string) => {
+    setUserSearchAsig((prev) => ({ ...prev, [nro]: q }));
+    if (!q.trim()) { setUserResultsAsig((prev) => ({ ...prev, [nro]: [] })); return; }
+    setUserSearchLoadingAsig((prev) => ({ ...prev, [nro]: true }));
+    api.get<UsuarioBusqueda[]>('/admin/usuarios', { params: { search: q } })
+      .then(({ data }) => setUserResultsAsig((prev) => ({ ...prev, [nro]: data })))
+      .catch(() => setUserResultsAsig((prev) => ({ ...prev, [nro]: [] })))
+      .finally(() => setUserSearchLoadingAsig((prev) => ({ ...prev, [nro]: false })));
+  };
+
+  const agregarAsignado = async (nro: string, u: UsuarioBusqueda) => {
+    setAsigLoading((prev) => ({ ...prev, [nro]: true }));
+    try {
+      const { data } = await api.post<UsuarioBusqueda[]>(`/admin/causas/${causaId}/expedientes/${nro}/asignados`, { userId: u._id });
+      setAsignadosPorExp((prev) => ({ ...prev, [nro]: data }));
+      setUserSearchAsig((prev) => ({ ...prev, [nro]: '' }));
+      setUserResultsAsig((prev) => ({ ...prev, [nro]: [] }));
+    } finally {
+      setAsigLoading((prev) => ({ ...prev, [nro]: false }));
+    }
+  };
+
+  const quitarAsignado = async (nro: string, userId: string) => {
+    setAsigLoading((prev) => ({ ...prev, [nro]: true }));
+    try {
+      await api.delete(`/admin/causas/${causaId}/expedientes/${nro}/asignados/${userId}`);
+      await fetchAsignados(nro);
+    } finally {
+      setAsigLoading((prev) => ({ ...prev, [nro]: false }));
+    }
+  };
+
   const handleUserSearch = (q: string) => {
     setUserSearch(q);
     if (!q.trim()) { setUserResults([]); return; }
@@ -625,7 +683,7 @@ function ExpedientesBlock({
                 <Fragment key={exp.nroExpediente}>
                   <tr
                     className="hover:bg-slate-50 cursor-pointer"
-                    onClick={() => setExpandedExp(isExpanded ? null : exp.nroExpediente)}
+                    onClick={() => toggleExpand(exp.nroExpediente)}
                   >
                     <td className="px-4 py-3 font-mono text-[#001f3f] font-semibold whitespace-nowrap">
                       <div className="flex items-center gap-1.5">
@@ -718,6 +776,81 @@ function ExpedientesBlock({
                               <UserPlus size={14} /> {isSendingSujeto ? 'Agregando...' : 'Agregar sujeto'}
                             </button>
                           </form>
+                        )}
+
+                        {isSecretario && (
+                          <div
+                            onClick={(e) => e.stopPropagation()}
+                            className="mt-4 space-y-2 bg-white rounded-xl border border-slate-200 p-4"
+                          >
+                            <p className="text-[11px] uppercase tracking-wider text-slate-400 font-semibold">
+                              Usuarios asignados
+                            </p>
+
+                            {asigLoading[exp.nroExpediente] ? (
+                              <div className="flex justify-center py-3">
+                                <Loader2 size={18} className="animate-spin text-[#001f3f]" />
+                              </div>
+                            ) : (
+                              <>
+                                {(asignadosPorExp[exp.nroExpediente] ?? []).length === 0 ? (
+                                  <p className="text-slate-400 text-sm">Sin usuarios asignados.</p>
+                                ) : (
+                                  <div className="space-y-1">
+                                    {(asignadosPorExp[exp.nroExpediente] ?? []).map((u) => (
+                                      <div key={u._id} className="flex items-center justify-between bg-slate-50 rounded-lg border border-slate-200 px-3 py-2">
+                                        <div>
+                                          <span className="text-sm font-medium text-slate-800">{u.name}</span>
+                                          <span className="text-xs text-slate-400 ml-2">{u.email}</span>
+                                        </div>
+                                        <button
+                                          type="button"
+                                          onClick={() => quitarAsignado(exp.nroExpediente, u._id)}
+                                          className="flex items-center gap-1 px-2 py-1 text-xs font-semibold text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                        >
+                                          <UserMinus size={13} /> Quitar
+                                        </button>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+
+                                <div className="relative">
+                                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                                  <input
+                                    type="text"
+                                    value={userSearchAsig[exp.nroExpediente] ?? ''}
+                                    onChange={(e) => handleUserSearchAsig(exp.nroExpediente, e.target.value)}
+                                    placeholder="Buscar usuario por nombre o email..."
+                                    className="form-input text-sm pl-8"
+                                  />
+                                  {userSearchLoadingAsig[exp.nroExpediente] && (
+                                    <Loader2 size={14} className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin text-slate-400" />
+                                  )}
+                                  {(userResultsAsig[exp.nroExpediente] ?? []).length > 0 && (
+                                    <div className="absolute z-10 mt-1 w-full bg-white border border-slate-200 rounded-xl shadow-lg overflow-hidden">
+                                      {(userResultsAsig[exp.nroExpediente] ?? []).map((u) => (
+                                        <button
+                                          key={u._id}
+                                          type="button"
+                                          onClick={() => agregarAsignado(exp.nroExpediente, u)}
+                                          className="w-full text-left px-4 py-2.5 hover:bg-slate-50 border-b border-slate-100 last:border-0 transition-colors flex items-center justify-between"
+                                        >
+                                          <div>
+                                            <span className="text-sm font-medium text-slate-800">{u.name}</span>
+                                            <span className="text-xs text-slate-400 ml-2">{u.email}</span>
+                                          </div>
+                                          <span className="flex items-center gap-1 text-xs text-blue-600 font-semibold">
+                                            <UserPlus size={13} /> Agregar
+                                          </span>
+                                        </button>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              </>
+                            )}
+                          </div>
                         )}
                       </td>
                     </tr>

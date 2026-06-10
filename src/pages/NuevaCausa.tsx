@@ -68,8 +68,18 @@ export default function NuevaCausa() {
         ultimoMovimiento:  fechaInicio || fechaPresentacion,
         objetoJuicio,
         sujetos:           sujetos.filter((s) => s.nombre.trim().length > 0),
-        expedientes:       [],
-        causasRelacionadas:[], 
+        expedientes:       [{
+          nroExpediente:     identificador,
+          caratula,
+          fechaPresentacion,
+          fechaInicio,
+          ultimoMovimiento:  fechaInicio || fechaPresentacion,
+          objetoJuicio,
+          sujetos:           [],
+          movimientos:       [],
+          comentarios:       [],
+        }],
+        causasRelacionadas:[],
 	status:'pendiente',
       });
       navigate(`/causas/${causa.id}`);

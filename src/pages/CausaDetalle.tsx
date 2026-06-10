@@ -553,7 +553,7 @@ function MovimientosBlock({
   causaId: string;
   movimientos: Movimiento[];
 }) {
-  const { currentCausa, agregarMovimiento } = useCausas();
+  const { currentCausa, agregarMovimiento, agregarExpediente } = useCausas();
   const { user } = useAuth();
   const { isReadOnly } = usePermissions();
   const isSecretario = user?.role === 'secretario' && !isReadOnly;
@@ -581,9 +581,23 @@ function MovimientosBlock({
 
   const handleCargarMovimiento = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!movTitulo.trim() || (!movDescripcion.trim() && !movArchivo) || !user || !expediente) return;
+    if (!movTitulo.trim() || (!movDescripcion.trim() && !movArchivo) || !user || !currentCausa) return;
     setIsSending(true);
     try {
+      let nroExpediente = expediente?.nroExpediente;
+      if (!nroExpediente) {
+        nroExpediente = currentCausa.identificador;
+        const now = new Date().toISOString();
+        await agregarExpediente(causaId, {
+          nroExpediente,
+          caratula:          currentCausa.caratula,
+          fechaPresentacion: now,
+          fechaInicio:       now,
+          ultimoMovimiento:  now,
+          objetoJuicio:      currentCausa.objetoJuicio,
+        });
+      }
+
       const prefix = movTipo === 'ACT' ? 'AC' : movTipo === 'ESC' ? 'ES' : movTipo === 'CED' ? 'CD' : movTipo === 'RES' ? 'RS' : movTipo === 'NOT' ? 'NT' : movTipo === 'AUD' ? 'AU' : 'PE';
       const mov: NuevoMovimiento = {
         id:          `m-${Date.now()}`,
@@ -597,7 +611,7 @@ function MovimientosBlock({
         acceso:      movTipo === 'ESC' ? 'Escrito de parte' : 'Resolución',
         archivo:     movArchivo ?? undefined,
       };
-      await agregarMovimiento(causaId, expediente.nroExpediente, mov);
+      await agregarMovimiento(causaId, nroExpediente, mov);
       setMovTipo('ACT');
       setMovTitulo('');
       setMovDescripcion('');
@@ -628,7 +642,7 @@ function MovimientosBlock({
 
   return (
     <div className="space-y-6">
-      {isSecretario && expediente && (
+      {isSecretario && currentCausa && (
         <div className="bg-slate-50 rounded-2xl border border-slate-200 p-5">
           <h3 className="text-xs font-bold uppercase tracking-wider text-[#001f3f] mb-3 flex items-center gap-2">
             <FilePlus size={14} className="text-blue-600" />

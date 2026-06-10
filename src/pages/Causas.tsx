@@ -65,7 +65,7 @@ export default function Causas() {
               className="flex items-center gap-2 px-5 py-2.5 bg-[#001f3f] text-white rounded-xl hover:bg-[#002d5a] transition-all shadow-lg shadow-blue-900/20 text-sm font-bold active:scale-95"
             >
               <Plus size={18} strokeWidth={3} />
-              Nuevo Expediente
+              Nueva Causa
             </Link>
           )}
         </div>

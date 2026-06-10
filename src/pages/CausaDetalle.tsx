@@ -163,7 +163,12 @@ export default function CausaDetalle() {
           </Section>
 
           <Section id="sujetos" title="Sujetos" icon={Users}>
-            <SujetosTable sujetos={causa.sujetos} />
+            <SujetosBlock
+              causaId={causa.id}
+              sujetos={causa.sujetos}
+              expediente={causa.expedientes[0]}
+              isSecretario={isSecretario}
+            />
           </Section>
 
           <Section id="movimientos" title="Movimientos" icon={ListOrdered}>
@@ -248,6 +253,117 @@ function SujetosTable({ sujetos }: { sujetos: Sujeto[] }) {
           ))}
         </tbody>
       </table>
+    </div>
+  );
+}
+
+function SujetosBlock({
+  causaId,
+  sujetos,
+  expediente,
+  isSecretario,
+}: {
+  causaId: string;
+  sujetos: Sujeto[];
+  expediente?: Expediente;
+  isSecretario: boolean;
+}) {
+  const { agregarSujeto } = useCausas();
+
+  const [vinculo, setVinculo]                 = useState<SujetoVinculo>('ACTOR');
+  const [nombre, setNombre]                   = useState('');
+  const [representante, setRepresentante]     = useState('');
+  const [domicilio, setDomicilio]             = useState('');
+  const [domicilioElectronico, setDomicilioElectronico] = useState('');
+  const [isSending, setIsSending]             = useState(false);
+  const [formError, setFormError]             = useState<string | null>(null);
+
+  const handleAgregar = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!nombre.trim() || !expediente) return;
+    setIsSending(true);
+    setFormError(null);
+    try {
+      await agregarSujeto(causaId, expediente.nroExpediente, {
+        vinculo,
+        nombre: nombre.trim(),
+        representante: representante.trim() || undefined,
+        domicilio: domicilio.trim() || undefined,
+        domicilioElectronico: domicilioElectronico.trim() || undefined,
+      });
+      setVinculo('ACTOR');
+      setNombre('');
+      setRepresentante('');
+      setDomicilio('');
+      setDomicilioElectronico('');
+    } catch (err: any) {
+      setFormError(err.response?.data?.message ?? 'Error al agregar el sujeto');
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <SujetosTable sujetos={sujetos} />
+
+      {isSecretario && expediente && (
+        <div className="bg-slate-50 rounded-2xl border border-slate-200 p-5">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-[#001f3f] mb-3 flex items-center gap-2">
+            <UserPlus size={14} className="text-blue-600" />
+            Agregar Sujeto
+          </h3>
+          <form onSubmit={handleAgregar} className="space-y-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+              <select
+                value={vinculo}
+                onChange={(e) => setVinculo(e.target.value as SujetoVinculo)}
+                className="form-input text-sm"
+              >
+                {SUJETO_VINCULO_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value}>{o.label}</option>
+                ))}
+              </select>
+              <input
+                value={nombre}
+                onChange={(e) => setNombre(e.target.value)}
+                placeholder="Nombre / Denominación"
+                className="form-input text-sm"
+                required
+              />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+              <input
+                value={representante}
+                onChange={(e) => setRepresentante(e.target.value)}
+                placeholder="Representante (opcional)"
+                className="form-input text-sm"
+              />
+              <input
+                value={domicilio}
+                onChange={(e) => setDomicilio(e.target.value)}
+                placeholder="Domicilio (opcional)"
+                className="form-input text-sm"
+              />
+              <input
+                type="email"
+                value={domicilioElectronico}
+                onChange={(e) => setDomicilioElectronico(e.target.value)}
+                placeholder="Domicilio electrónico (opcional)"
+                className="form-input text-sm"
+              />
+            </div>
+            {formError && <p className="text-xs text-red-600">{formError}</p>}
+            <button
+              type="submit"
+              disabled={!nombre.trim() || isSending}
+              className="w-full flex items-center justify-center gap-2 py-2 bg-[#001f3f] text-white rounded-lg text-xs font-bold hover:bg-[#002d5a] disabled:opacity-50"
+            >
+              <Send size={14} /> {isSending ? 'Agregando...' : 'Agregar sujeto'}
+            </button>
+          </form>
+        </div>
+      )}
     </div>
   );
 }

@@ -150,7 +150,23 @@ const EMPTY_PAGE: PaginatedCausas = { data: [], total: 0, page: 1, limit: 20, to
 
 function fmtDate(raw: string | Date | undefined): string {
   if (!raw) return '';
-  const d = new Date(raw as string);
+  const value = String(raw);
+
+  // Fechas que representan solo un día (sin hora significativa) llegan como
+  // "YYYY-MM-DD" o "YYYY-MM-DDT00:00:00.000Z". Parsearlas directamente con
+  // `new Date(...)` las interpreta como medianoche UTC, que en timezones
+  // negativos (ej. Argentina, UTC-3) cae en el día anterior. Para evitarlo,
+  // se parsean al mediodía local.
+  const dateOnlyMatch = value.match(/^(\d{4}-\d{2}-\d{2})(?:T00:00:00(?:\.000)?Z?)?$/);
+  if (dateOnlyMatch) {
+    const d = new Date(`${dateOnlyMatch[1]}T12:00:00`);
+    if (isNaN(d.getTime())) return String(raw);
+    return d.toLocaleDateString('es-AR', {
+      day: '2-digit', month: '2-digit', year: 'numeric',
+    });
+  }
+
+  const d = new Date(value);
   if (isNaN(d.getTime())) return String(raw);
   return d.toLocaleDateString('es-AR', {
     day: '2-digit', month: '2-digit', year: 'numeric',

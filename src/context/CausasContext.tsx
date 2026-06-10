@@ -121,7 +121,6 @@ export type FetchCausasParams = {
 };
 
 type CreateCausaPayload = Omit<Causa, 'identificador' | 'expedientes' | 'causasRelacionadas' | 'sujetos'> & {
-  identificador?: string;
   sujetos?: Sujeto[];
   expedientes?: Expediente[];
   causasRelacionadas?: CausaRelacionada[];

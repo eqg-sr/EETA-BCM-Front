@@ -1,9 +1,9 @@
 import { Fragment, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, Paperclip, FilePlus, Send, Upload, Info, Users, ListOrdered, Link2, Download, Trash2, FolderOpen, ChevronDown, ChevronRight, UserPlus, X, Search, Loader2 } from 'lucide-react';
+import { ArrowLeft, Paperclip, FilePlus, Send, Upload, Info, Users, ListOrdered, Link2, Download, Trash2, FolderOpen, ChevronDown, ChevronRight, UserPlus, X, Search, Loader2, FileText } from 'lucide-react';
 import Layout from '../components/Layout';
 import StatusBadge from '../components/StatusBadge';
-import { useCausas, type Movimiento, type MovimientoTipo, type CausaStatus, type Sujeto, type SujetoVinculo, type CausaRelacionada, type Expediente } from '../context/CausasContext';
+import { useCausas, type Movimiento, type NuevoMovimiento, type MovimientoTipo, type CausaStatus, type Sujeto, type SujetoVinculo, type CausaRelacionada, type Expediente } from '../context/CausasContext';
 import { useAuth, usePermissions } from '../context/AuthContext';
 import api from '../services/api';
 
@@ -803,6 +803,7 @@ const MOVIMIENTO_TIPO_LABELS: Record<MovimientoTipo, string> = {
 };
 
 const DESCRIPCION_MAX = 2000;
+const MOV_ARCHIVO_MAX_SIZE = 20 * 1024 * 1024;
 
 function MovimientosBlock({
   causaId,
@@ -822,33 +823,65 @@ function MovimientosBlock({
   const [movTitulo, setMovTitulo]       = useState('');
   const [movDescripcion, setMovDescripcion] = useState('');
   const [movArchivo, setMovArchivo]     = useState<File | null>(null);
+  const [movArchivoError, setMovArchivoError] = useState<string | null>(null);
   const [isSending, setIsSending]       = useState(false);
+
+  const handleArchivoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] ?? null;
+    if (file && file.size > MOV_ARCHIVO_MAX_SIZE) {
+      setMovArchivoError('El archivo no puede superar los 20MB');
+      setMovArchivo(null);
+      e.target.value = '';
+      return;
+    }
+    setMovArchivoError(null);
+    setMovArchivo(file);
+  };
 
   const handleCargarMovimiento = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!movTitulo.trim() || !movDescripcion.trim() || !user || !expediente) return;
+    if (!movTitulo.trim() || (!movDescripcion.trim() && !movArchivo) || !user || !expediente) return;
     setIsSending(true);
     try {
       const prefix = movTipo === 'ACT' ? 'AC' : movTipo === 'ESC' ? 'ES' : movTipo === 'CED' ? 'CD' : movTipo === 'RES' ? 'RS' : movTipo === 'NOT' ? 'NT' : movTipo === 'AUD' ? 'AU' : 'PE';
-      const mov: Movimiento = {
+      const mov: NuevoMovimiento = {
         id:          `m-${Date.now()}`,
         fecha:       new Date().toISOString(),
         tipo:        movTipo,
         titulo:      movTitulo.trim(),
-        descripcion: movDescripcion.trim(),
+        descripcion: movDescripcion.trim() || undefined,
         numero:      `${prefix}-${new Date().getFullYear()}-${Math.floor(Math.random() * 90000 + 10000)}`,
         tribunal:    'TRIBUNAL ARBITRAL BCM',
         presentante: user.name,
         acceso:      movTipo === 'ESC' ? 'Escrito de parte' : 'Resolución',
-        adjuntos:    !!movArchivo,
+        archivo:     movArchivo ?? undefined,
       };
       await agregarMovimiento(causaId, expediente.nroExpediente, mov);
       setMovTipo('ACT');
       setMovTitulo('');
       setMovDescripcion('');
       setMovArchivo(null);
+      setMovArchivoError(null);
     } finally {
       setIsSending(false);
+    }
+  };
+
+  const handleDescargarMovimiento = async (m: Movimiento) => {
+    if (!expediente) return;
+    try {
+      const response = await api.get(
+        `/causas/${causaId}/expedientes/${expediente.nroExpediente}/movimientos/${m.id}/archivo`,
+        { responseType: 'blob' }
+      );
+      const url = URL.createObjectURL(response.data);
+      const a   = document.createElement('a');
+      a.href     = url;
+      a.download = m.nombreArchivo ?? 'archivo';
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      alert('No se pudo descargar el archivo.');
     }
   };
 
@@ -887,30 +920,43 @@ function MovimientosBlock({
               <textarea
                 value={movDescripcion}
                 onChange={(e) => setMovDescripcion(e.target.value.slice(0, DESCRIPCION_MAX))}
-                placeholder="Descripción del movimiento"
+                placeholder="Descripción del movimiento (opcional si adjuntás un PDF)"
                 rows={3}
-                required
                 className="form-input text-sm resize-none"
               />
               <div className="text-right text-[11px] text-slate-400 mt-1">
                 {movDescripcion.length}/{DESCRIPCION_MAX}
               </div>
             </div>
-            <label className="flex items-center gap-2 bg-white border border-dashed border-slate-300 rounded-lg px-3 py-2 cursor-pointer hover:bg-slate-100 transition-colors">
-              <Upload size={14} className="text-[#001f3f]" />
-              <span className="text-xs text-slate-600 truncate">
-                {movArchivo ? movArchivo.name : 'Adjuntar PDF (opcional)'}
-              </span>
-              <input
-                type="file"
-                accept=".pdf"
-                className="hidden"
-                onChange={(e) => setMovArchivo(e.target.files?.[0] ?? null)}
-              />
-            </label>
+            <div>
+              <label className="flex items-center gap-2 bg-white border border-dashed border-slate-300 rounded-lg px-3 py-2 cursor-pointer hover:bg-slate-100 transition-colors">
+                <Upload size={14} className="text-[#001f3f]" />
+                <span className="text-xs text-slate-600 truncate">
+                  {movArchivo ? movArchivo.name : 'Adjuntar archivo (opcional, PDF/DOC/DOCX/JPG/PNG, máx. 20MB)'}
+                </span>
+                <input
+                  type="file"
+                  accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                  className="hidden"
+                  onChange={handleArchivoChange}
+                />
+              </label>
+              <p className="text-[11px] text-slate-400 mt-1">
+                Si subís un PDF, la descripción se completará automáticamente
+              </p>
+              {movArchivo?.type === 'application/pdf' && (
+                <p className="flex items-center gap-1 text-[11px] text-blue-700 mt-1">
+                  <FileText size={12} />
+                  Se intentará extraer el texto del PDF para completar la descripción
+                </p>
+              )}
+              {movArchivoError && (
+                <p className="text-[11px] text-red-600 mt-1">{movArchivoError}</p>
+              )}
+            </div>
             <button
               type="submit"
-              disabled={!movTitulo.trim() || !movDescripcion.trim() || isSending}
+              disabled={!movTitulo.trim() || (!movDescripcion.trim() && !movArchivo) || isSending}
               className="w-full flex items-center justify-center gap-2 py-2 bg-[#001f3f] text-white rounded-lg text-xs font-bold hover:bg-[#002d5a] disabled:opacity-50"
             >
               <Send size={14} /> {isSending ? 'Registrando...' : 'Registrar movimiento'}
@@ -944,7 +990,19 @@ function MovimientosBlock({
                   Origen: TRIBUNAL ARBITRAL BCM - Destino: {m.tribunal ?? 'TRIBUNAL ARBITRAL BCM'}
                 </td>
                 <td className="px-4 py-3 font-semibold text-slate-700">{m.tipo}</td>
-                <td className="px-4 py-3">{m.adjuntos ? <Paperclip size={14} className="text-slate-500" /> : null}</td>
+                <td className="px-4 py-3">
+                  {m.nombreArchivo ? (
+                    <button
+                      onClick={() => handleDescargarMovimiento(m)}
+                      className="flex items-center gap-1 text-xs text-blue-700 hover:underline"
+                    >
+                      <Download size={13} />
+                      {m.nombreArchivo}
+                    </button>
+                  ) : m.adjuntos ? (
+                    <Paperclip size={14} className="text-slate-500" />
+                  ) : null}
+                </td>
               </tr>
             ))}
             {movimientos.length === 0 && (

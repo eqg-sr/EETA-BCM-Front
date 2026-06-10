@@ -27,6 +27,12 @@ export type Movimiento = {
   acceso?: string;
   adjuntos?: boolean;
   relaciones?: boolean;
+  archivo?: string;
+  nombreArchivo?: string;
+};
+
+export type NuevoMovimiento = Omit<Movimiento, 'archivo' | 'nombreArchivo'> & {
+  archivo?: File;
 };
 
 export type Comentario = {
@@ -127,7 +133,7 @@ type CausasContextType = {
   actualizarCausa: (id: string, data: Partial<Causa>) => Promise<void>;
   eliminarCausa: (id: string) => Promise<void>;
   cambiarStatus: (causaId: string, status: CausaStatus) => Promise<void>;
-  agregarMovimiento: (causaId: string, expNro: string, data: Movimiento) => Promise<void>;
+  agregarMovimiento: (causaId: string, expNro: string, data: NuevoMovimiento) => Promise<void>;
   agregarSujeto: (causaId: string, expNro: string, data: Sujeto) => Promise<void>;
   agregarRelacionada: (causaId: string, identificador: string, descripcion: string, archivo?: File) => Promise<void>;
   eliminarRelacionada: (causaId: string, identificador: string) => Promise<void>;
@@ -238,8 +244,15 @@ export function CausasProvider({ children }: { children: React.ReactNode }) {
     await fetchCausa(causaId);
   };
 
-  const agregarMovimiento = async (causaId: string, expNro: string, data: Movimiento) => {
-    await api.post(`/causas/${causaId}/expedientes/${expNro}/movimientos`, data);
+  const agregarMovimiento = async (causaId: string, expNro: string, data: NuevoMovimiento) => {
+    const { archivo, ...rest } = data;
+    const form = new FormData();
+    Object.entries(rest).forEach(([key, value]) => {
+      if (value === undefined || value === null || value === '') return;
+      form.append(key, String(value));
+    });
+    if (archivo) form.append('archivo', archivo);
+    await api.post(`/causas/${causaId}/expedientes/${expNro}/movimientos`, form);
     await fetchCausa(causaId);
   };
 

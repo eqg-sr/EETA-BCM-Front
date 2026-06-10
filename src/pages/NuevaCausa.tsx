@@ -37,7 +37,7 @@ export default function NuevaCausa() {
   if (!canCreateCausa) {
     return (
       <Layout>
-        <p className="text-slate-500">No tiene permisos para crear causas.</p>
+        <p className="text-slate-500">No tiene permisos para crear expedientes.</p>
       </Layout>
     );
   }
@@ -104,7 +104,7 @@ export default function NuevaCausa() {
           <div className="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm space-y-5">
             <div className="flex items-center gap-2 text-[#001f3f] mb-2">
               <Info size={18} className="text-blue-600" />
-              <h2 className="font-bold uppercase tracking-wider text-xs">Datos de la Causa</h2>
+              <h2 className="font-bold uppercase tracking-wider text-xs">Datos del Expediente</h2>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

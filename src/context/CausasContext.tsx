@@ -96,6 +96,8 @@ export type Causa = {
   ultimoMovimiento: string;
   objetoJuicio: string;
   status: CausaStatus;
+  archivo?: string;
+  nombreArchivo?: string;
   sujetos: Sujeto[];
   expedientes: Expediente[];
   causasRelacionadas: CausaRelacionada[];
@@ -118,7 +120,8 @@ export type FetchCausasParams = {
   status?: CausaStatus;
 };
 
-type CreateCausaPayload = Omit<Causa, 'expedientes' | 'causasRelacionadas' | 'sujetos'> & {
+type CreateCausaPayload = Omit<Causa, 'identificador' | 'expedientes' | 'causasRelacionadas' | 'sujetos'> & {
+  identificador?: string;
   sujetos?: Sujeto[];
   expedientes?: Expediente[];
   causasRelacionadas?: CausaRelacionada[];
@@ -132,6 +135,7 @@ type CausasContextType = {
   fetchCausas: (params?: FetchCausasParams) => Promise<void>;
   fetchCausa: (id: string) => Promise<void>;
   crearCausa: (data: CreateCausaPayload) => Promise<Causa>;
+  subirCaratulaArchivo: (causaId: string, archivo: File) => Promise<void>;
   actualizarCausa: (id: string, data: Partial<Causa>) => Promise<void>;
   eliminarCausa: (id: string) => Promise<void>;
   cambiarStatus: (causaId: string, status: CausaStatus) => Promise<void>;
@@ -244,6 +248,12 @@ export function CausasProvider({ children }: { children: React.ReactNode }) {
     return causa;
   };
 
+  const subirCaratulaArchivo = async (causaId: string, archivo: File) => {
+    const form = new FormData();
+    form.append('archivo', archivo);
+    await api.post(`/causas/${causaId}/caratula`, form);
+  };
+
   const actualizarCausa = async (id: string, payload: Partial<Causa>) => {
     await api.put(`/causas/${id}`, payload);
     await fetchCausa(id);
@@ -312,7 +322,7 @@ export function CausasProvider({ children }: { children: React.ReactNode }) {
   return (
     <CausasContext.Provider value={{
       causas, currentCausa, isLoading, error,
-      fetchCausas, fetchCausa, crearCausa, actualizarCausa, eliminarCausa, cambiarStatus,
+      fetchCausas, fetchCausa, crearCausa, subirCaratulaArchivo, actualizarCausa, eliminarCausa, cambiarStatus,
       agregarMovimiento, agregarSujeto, agregarSujetoCausa, agregarRelacionada, eliminarRelacionada,
       agregarExpediente, eliminarExpediente,
     }}>

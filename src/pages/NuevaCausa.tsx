@@ -14,10 +14,9 @@ const SALAS = [
 
 export default function NuevaCausa() {
   const navigate = useNavigate();
-  const { crearCausa } = useCausas();
+  const { crearCausa, subirCaratulaArchivo } = useCausas();
   const { canCreateCausa } = usePermissions();
 
-  const [identificador, setIdentificador]     = useState('');
   const [numeroInterno, setNumeroInterno]     = useState('');
   const [caratula, setCaratula]               = useState('');
   const [tribunal, setTribunal]               = useState(SALAS[0]);
@@ -58,7 +57,6 @@ export default function NuevaCausa() {
     try {
       const causa = await crearCausa({
         id:                `CAU-${Date.now()}`,
-        identificador,
         numeroInterno,
         caratula,
         tribunal,
@@ -69,7 +67,7 @@ export default function NuevaCausa() {
         objetoJuicio,
         sujetos:           sujetos.filter((s) => s.nombre.trim().length > 0),
         expedientes:       [{
-          nroExpediente:     identificador,
+          nroExpediente:     numeroInterno,
           caratula,
           fechaPresentacion,
           fechaInicio,
@@ -82,6 +80,9 @@ export default function NuevaCausa() {
         causasRelacionadas:[],
 	status:'pendiente',
       });
+      if (caratulaArchivo) {
+        await subirCaratulaArchivo(causa.id, caratulaArchivo);
+      }
       navigate(`/causas/${causa.id}`);
     } catch {
       setSubmitError('Error al crear el expediente. Verificá los datos e intentá nuevamente.');
@@ -118,15 +119,6 @@ export default function NuevaCausa() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Field label="Identificador" required>
-                <input
-                  value={identificador}
-                  onChange={(e) => setIdentificador(e.target.value)}
-                  placeholder="Ej: BCM-2026-00045"
-                  className="form-input"
-                  required
-                />
-              </Field>
               <Field label="Número Interno" required>
                 <input
                   value={numeroInterno}

@@ -78,6 +78,23 @@ export default function CausaDetalle() {
     }
   };
 
+  const handleDescargarCaratula = async () => {
+    try {
+      const response = await api.get(
+        `/causas/${causa.id}/caratula/archivo`,
+        { responseType: 'blob' }
+      );
+      const url = URL.createObjectURL(response.data);
+      const a   = document.createElement('a');
+      a.href     = url;
+      a.download = causa.nombreArchivo ?? 'caratula.pdf';
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      alert('No se pudo descargar el archivo.');
+    }
+  };
+
   return (
     <Layout>
       <Link to="/causas" className="flex items-center gap-2 text-slate-500 hover:text-[#001f3f] text-sm mb-4 w-fit">
@@ -148,6 +165,19 @@ export default function CausaDetalle() {
               <InfoRow label="Fecha de Inicio"      value={causa.fechaInicio} />
               <InfoRow label="Último Movimiento"    value={causa.ultimoMovimiento} />
               <InfoRow label="Objeto del Juicio"    value={causa.objetoJuicio} />
+              {causa.nombreArchivo && (
+                <div>
+                  <div className="text-[11px] uppercase tracking-wider text-slate-400 font-semibold">Adjunto de Carátula</div>
+                  <button
+                    type="button"
+                    onClick={handleDescargarCaratula}
+                    className="mt-0.5 flex items-center gap-1.5 text-sm text-blue-700 hover:text-blue-900 font-medium"
+                  >
+                    <Download size={14} />
+                    {causa.nombreArchivo}
+                  </button>
+                </div>
+              )}
             </div>
           </Section>
 

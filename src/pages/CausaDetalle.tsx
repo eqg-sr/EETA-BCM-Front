@@ -221,6 +221,7 @@ function SujetosTable({ sujetos }: { sujetos: Sujeto[] }) {
             <th className="px-4 py-3 font-semibold">Representante</th>
             <th className="px-4 py-3 font-semibold">Domicilio</th>
             <th className="px-4 py-3 font-semibold">Domicilio Electrónico</th>
+            <th className="px-4 py-3 font-semibold">Estado</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-100">
@@ -231,6 +232,18 @@ function SujetosTable({ sujetos }: { sujetos: Sujeto[] }) {
               <td className="px-4 py-3 text-blue-700">{s.representante ?? '-'}</td>
               <td className="px-4 py-3 text-blue-700">{s.domicilio ?? '-'}</td>
               <td className="px-4 py-3 text-blue-700 font-mono text-xs">{s.domicilioElectronico ?? '-'}</td>
+              <td className="px-4 py-3">
+                {s.aprobado === true && (
+                  <span className="inline-block px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700">
+                    Aprobado
+                  </span>
+                )}
+                {s.aprobado === false && (
+                  <span className="inline-block px-2.5 py-1 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-700">
+                    Pendiente de aprobación
+                  </span>
+                )}
+              </td>
             </tr>
           ))}
         </tbody>

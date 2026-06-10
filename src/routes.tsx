@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import Autorizar from './pages/Autorizar';
 import Causas from './pages/Causas';
 import NuevaCausa from './pages/NuevaCausa';
 import CausaDetalle from './pages/CausaDetalle';
@@ -19,9 +20,10 @@ export default function AppRoutes() {
 
   return (
     <Routes>
-      <Route path="/login"    element={<Login />} />
-      <Route path="/register" element={<Register />} />
-      <Route path="/help"     element={<HelpCenter />} />
+      <Route path="/login"     element={<Login />} />
+      <Route path="/register"  element={<Register />} />
+      <Route path="/help"      element={<HelpCenter />} />
+      <Route path="/autorizar" element={<Autorizar />} />
 
       <Route path="/causas"      element={requireAuth(<Causas />)} />
       <Route path="/causas/new"  element={requireAuth(<NuevaCausa />)} />

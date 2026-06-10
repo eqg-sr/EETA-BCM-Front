@@ -11,6 +11,8 @@ export type Sujeto = {
   representante?: string;
   domicilio?: string;
   domicilioElectronico?: string;
+  aprobado?: boolean;
+  aprobacionToken?: string;
 };
 
 export type MovimientoTipo = 'ACT' | 'ESC' | 'CED' | 'RES' | 'NOT' | 'AUD' | 'PER';

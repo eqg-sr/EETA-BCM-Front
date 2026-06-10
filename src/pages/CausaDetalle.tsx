@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft, Paperclip, FilePlus, Send, Upload, Info, Users, ListOrdered, Link2, Download, Trash2, UserPlus, FileText } from 'lucide-react';
 import Layout from '../components/Layout';
@@ -33,7 +33,6 @@ export default function CausaDetalle() {
   const { user } = useAuth();
   const { isReadOnly } = usePermissions();
   const isSecretario = user?.role === 'secretario' && !isReadOnly;
-  const isActor = user?.role === 'actor' && !isReadOnly;
 
   const [statusLoading, setStatusLoading] = useState(false);
   const [statusError, setStatusError]     = useState<string | null>(null);

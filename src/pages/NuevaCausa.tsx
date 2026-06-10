@@ -17,7 +17,6 @@ export default function NuevaCausa() {
   const { crearCausa, subirCaratulaArchivo } = useCausas();
   const { canCreateCausa } = usePermissions();
 
-  const [numeroInterno, setNumeroInterno]     = useState('');
   const [caratula, setCaratula]               = useState('');
   const [tribunal, setTribunal]               = useState(SALAS[0]);
   const [arbitro, setArbitro]                 = useState('');
@@ -57,7 +56,6 @@ export default function NuevaCausa() {
     try {
       const causa = await crearCausa({
         id:                `CAU-${Date.now()}`,
-        numeroInterno,
         caratula,
         tribunal,
         arbitro,
@@ -66,17 +64,6 @@ export default function NuevaCausa() {
         ultimoMovimiento:  fechaInicio || fechaPresentacion,
         objetoJuicio,
         sujetos:           sujetos.filter((s) => s.nombre.trim().length > 0),
-        expedientes:       [{
-          nroExpediente:     numeroInterno,
-          caratula,
-          fechaPresentacion,
-          fechaInicio,
-          ultimoMovimiento:  fechaInicio || fechaPresentacion,
-          objetoJuicio,
-          sujetos:           [],
-          movimientos:       [],
-          comentarios:       [],
-        }],
         causasRelacionadas:[],
 	status:'pendiente',
       });
@@ -119,15 +106,6 @@ export default function NuevaCausa() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Field label="Número Interno" required>
-                <input
-                  value={numeroInterno}
-                  onChange={(e) => setNumeroInterno(e.target.value)}
-                  placeholder="Ej: 00245"
-                  className="form-input"
-                  required
-                />
-              </Field>
               <Field label="Fecha de Presentación" required>
                 <input
                   type="date"

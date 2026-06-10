@@ -137,6 +137,7 @@ type CausasContextType = {
   cambiarStatus: (causaId: string, status: CausaStatus) => Promise<void>;
   agregarMovimiento: (causaId: string, expNro: string, data: NuevoMovimiento) => Promise<void>;
   agregarSujeto: (causaId: string, expNro: string, data: Sujeto) => Promise<void>;
+  agregarSujetoCausa: (causaId: string, data: Sujeto) => Promise<void>;
   agregarRelacionada: (causaId: string, identificador: string, descripcion: string, archivo?: File) => Promise<void>;
   eliminarRelacionada: (causaId: string, identificador: string) => Promise<void>;
   agregarExpediente: (causaId: string, data: NuevoExpediente) => Promise<void>;
@@ -263,6 +264,11 @@ export function CausasProvider({ children }: { children: React.ReactNode }) {
     await fetchCausa(causaId);
   };
 
+  const agregarSujetoCausa = async (causaId: string, data: Sujeto) => {
+    await api.post(`/causas/${causaId}/sujetos`, data);
+    await fetchCausa(causaId);
+  };
+
   const agregarRelacionada = async (causaId: string, identificador: string, descripcion: string, archivo?: File) => {
     const form = new FormData();
     form.append('identificador', identificador);
@@ -291,7 +297,7 @@ export function CausasProvider({ children }: { children: React.ReactNode }) {
     <CausasContext.Provider value={{
       causas, currentCausa, isLoading, error,
       fetchCausas, fetchCausa, crearCausa, actualizarCausa, eliminarCausa, cambiarStatus,
-      agregarMovimiento, agregarSujeto, agregarRelacionada, eliminarRelacionada,
+      agregarMovimiento, agregarSujeto, agregarSujetoCausa, agregarRelacionada, eliminarRelacionada,
       agregarExpediente, eliminarExpediente,
     }}>
       {children}

@@ -166,7 +166,6 @@ export default function CausaDetalle() {
             <SujetosBlock
               causaId={causa.id}
               sujetos={causa.sujetos}
-              expediente={causa.expedientes[0]}
               isSecretario={isSecretario}
             />
           </Section>
@@ -260,15 +259,13 @@ function SujetosTable({ sujetos }: { sujetos: Sujeto[] }) {
 function SujetosBlock({
   causaId,
   sujetos,
-  expediente,
   isSecretario,
 }: {
   causaId: string;
   sujetos: Sujeto[];
-  expediente?: Expediente;
   isSecretario: boolean;
 }) {
-  const { agregarSujeto } = useCausas();
+  const { agregarSujetoCausa } = useCausas();
 
   const [vinculo, setVinculo]                 = useState<SujetoVinculo>('ACTOR');
   const [nombre, setNombre]                   = useState('');
@@ -280,11 +277,11 @@ function SujetosBlock({
 
   const handleAgregar = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!nombre.trim() || !expediente) return;
+    if (!nombre.trim()) return;
     setIsSending(true);
     setFormError(null);
     try {
-      await agregarSujeto(causaId, expediente.nroExpediente, {
+      await agregarSujetoCausa(causaId, {
         vinculo,
         nombre: nombre.trim(),
         representante: representante.trim() || undefined,
@@ -307,7 +304,7 @@ function SujetosBlock({
     <div className="space-y-6">
       <SujetosTable sujetos={sujetos} />
 
-      {isSecretario && expediente && (
+      {isSecretario && (
         <div className="bg-slate-50 rounded-2xl border border-slate-200 p-5">
           <h3 className="text-xs font-bold uppercase tracking-wider text-[#001f3f] mb-3 flex items-center gap-2">
             <UserPlus size={14} className="text-blue-600" />

@@ -29,6 +29,11 @@ export default function Register() {
     e.preventDefault();
     setError(null);
 
+    if (password.length < 8) {
+      setError('La contraseña debe tener mínimo 8 caracteres.');
+      return;
+    }
+
     if (password !== confirmPassword) {
       setError('Las contraseñas no coinciden.');
       return;
@@ -41,7 +46,11 @@ export default function Register() {
       setTimeout(() => nav('/login'), 3000);
     } catch (err) {
       if (axios.isAxiosError(err)) {
-        setError(err.response?.data?.message ?? 'Error al registrar. Intentá de nuevo.');
+        const data = err.response?.data;
+        const fieldError = data?.errors?.fieldErrors
+          ? (Object.values(data.errors.fieldErrors).flat()[0] as string | undefined)
+          : undefined;
+        setError(data?.message ?? fieldError ?? 'Error al registrar. Intentá de nuevo.');
       } else {
         setError('Error al registrar. Intentá de nuevo.');
       }

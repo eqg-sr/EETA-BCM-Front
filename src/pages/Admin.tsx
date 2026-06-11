@@ -226,7 +226,11 @@ function AsignacionesTab() {
     const term = q.trim().toLowerCase();
     if (!term) { setCausaResults([]); return; }
     setCausaResults(
-      allCausas.filter((c) => (c.nroExpedienteElectronico ?? '').toLowerCase().includes(term))
+      allCausas.filter((c) =>
+        (c.nroExpedienteElectronico ?? '').toLowerCase().includes(term) ||
+        (c.identificador ?? '').toLowerCase().includes(term) ||
+        (c.caratula ?? '').toLowerCase().includes(term)
+      )
     );
   };
 

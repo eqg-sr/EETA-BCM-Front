@@ -11,6 +11,7 @@ type CausaResumen = {
   id: string;
   identificador: string;
   numeroInterno: string;
+  nroExpedienteElectronico?: string;
   caratula: string;
   status: CausaStatus;
   ultimoMovimiento: string;
@@ -251,7 +252,7 @@ export default function Dashboard() {
             <table className="w-full text-sm">
               <thead className="bg-slate-50 text-left">
                 <tr className="text-slate-600 text-xs uppercase tracking-wider">
-                  <th className="px-4 py-3 font-semibold">Identificador</th>
+                  <th className="px-4 py-3 font-semibold">Nro. Expediente Electrónico</th>
                   <th className="px-4 py-3 font-semibold">Carátula</th>
                   <th className="px-4 py-3 font-semibold">Estado</th>
                   <th className="px-4 py-3 font-semibold">Últ. movimiento</th>
@@ -262,7 +263,7 @@ export default function Dashboard() {
                 {recientes.map((c) => (
                   <tr key={c.id} className="hover:bg-slate-50 transition-colors">
                     <td className="px-4 py-3 font-mono text-[#001f3f] font-semibold">
-                      {c.identificador} <span className="text-slate-400">({c.numeroInterno})</span>
+                      {c.nroExpedienteElectronico || c.identificador} <span className="text-slate-400">({c.numeroInterno})</span>
                     </td>
                     <td className="px-4 py-3 font-semibold text-slate-800 max-w-md truncate" title={c.caratula}>
                       {c.caratula}

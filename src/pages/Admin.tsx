@@ -386,30 +386,6 @@ function AsignacionesTab() {
                 </div>
               ) : (
                 <>
-                  <div className="space-y-2">
-                    <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Usuarios asignados</p>
-                    {(asignados[exp.nroExpediente] ?? []).length === 0 ? (
-                      <p className="text-sm text-slate-400">Sin usuarios asignados.</p>
-                    ) : (
-                      <div className="space-y-1">
-                        {(asignados[exp.nroExpediente] ?? []).map((u) => (
-                          <div key={u._id} className="flex items-center justify-between bg-white rounded-lg border border-slate-200 px-3 py-2">
-                            <div>
-                              <span className="text-sm font-medium text-slate-800">{u.name}</span>
-                              <span className="text-xs text-slate-400 ml-2">{ROLE_LABELS[u.role]}</span>
-                            </div>
-                            <button
-                              onClick={() => quitarUsuario(selectedCausa.id, exp.nroExpediente, u._id)}
-                              className="flex items-center gap-1 px-2 py-1 text-xs font-semibold text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                            >
-                              <UserMinus size={13} /> Quitar
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
                   <div className="relative">
                     <p className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Agregar usuario</p>
                     <div className="relative">
@@ -441,6 +417,30 @@ function AsignacionesTab() {
                               <UserPlus size={13} /> Agregar
                             </span>
                           </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Usuarios asignados</p>
+                    {(asignados[exp.nroExpediente] ?? []).length === 0 ? (
+                      <p className="text-sm text-slate-400">Sin usuarios asignados.</p>
+                    ) : (
+                      <div className="space-y-1">
+                        {(asignados[exp.nroExpediente] ?? []).map((u) => (
+                          <div key={u._id} className="flex items-center justify-between bg-white rounded-lg border border-slate-200 px-3 py-2">
+                            <div>
+                              <span className="text-sm font-medium text-slate-800">{u.name}</span>
+                              <span className="text-xs text-slate-400 ml-2">{ROLE_LABELS[u.role]}</span>
+                            </div>
+                            <button
+                              onClick={() => quitarUsuario(selectedCausa.id, exp.nroExpediente, u._id)}
+                              className="flex items-center gap-1 px-2 py-1 text-xs font-semibold text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            >
+                              <UserMinus size={13} /> Quitar
+                            </button>
+                          </div>
                         ))}
                       </div>
                     )}

@@ -1,10 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { FolderOpen, Clock, UserCheck, ExternalLink, LayoutDashboard, PieChart as PieChartIcon, BarChart3 } from 'lucide-react';
-import {
-  PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer,
-  BarChart, Bar, XAxis, YAxis, CartesianGrid,
-} from 'recharts';
 import Layout from '../components/Layout';
 import StatusBadge from '../components/StatusBadge';
 import api from '../services/api';
@@ -215,24 +211,13 @@ export default function Dashboard() {
             <h2 className="font-bold uppercase tracking-wider text-xs">Distribución por estado</h2>
           </div>
           {total > 0 ? (
-            <ResponsiveContainer width="100%" height={260}>
-              <PieChart>
-                <Pie
-                  data={STATUS_OPTIONS.map((s) => ({ name: STATUS_LABELS[s.value], value: statusCounts[s.value], status: s.value }))}
-                  dataKey="value"
-                  nameKey="name"
-                  innerRadius={60}
-                  outerRadius={90}
-                  paddingAngle={2}
-                >
-                  {STATUS_OPTIONS.map((s) => (
-                    <Cell key={s.value} fill={STATUS_CHART_COLORS[s.value]} />
-                  ))}
-                </Pie>
-                <Tooltip />
-                <Legend />
-              </PieChart>
-            </ResponsiveContainer>
+            <DonutChart
+              data={STATUS_OPTIONS.map((s) => ({
+                label: STATUS_LABELS[s.value],
+                value: statusCounts[s.value],
+                color: STATUS_CHART_COLORS[s.value],
+              }))}
+            />
           ) : (
             <div className="flex items-center justify-center h-[260px] text-sm text-slate-400">
               Sin datos para mostrar.
@@ -246,15 +231,7 @@ export default function Dashboard() {
             <h2 className="font-bold uppercase tracking-wider text-xs">Expedientes iniciados por mes</h2>
           </div>
           {porMes.some((m) => m.cantidad > 0) ? (
-            <ResponsiveContainer width="100%" height={260}>
-              <BarChart data={porMes}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                <XAxis dataKey="label" tick={{ fontSize: 12 }} />
-                <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
-                <Tooltip />
-                <Bar dataKey="cantidad" name="Expedientes" fill="#001f3f" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+            <BarsChart data={porMes.map((m) => ({ label: m.label, value: m.cantidad }))} />
           ) : (
             <div className="flex items-center justify-center h-[260px] text-sm text-slate-400">
               Sin datos para mostrar.
@@ -313,5 +290,67 @@ export default function Dashboard() {
         )}
       </div>
     </Layout>
+  );
+}
+
+function DonutChart({ data }: { data: { label: string; value: number; color: string }[] }) {
+  const total = data.reduce((sum, d) => sum + d.value, 0);
+  const radius = 70;
+  const circumference = 2 * Math.PI * radius;
+  let offsetAcc = 0;
+
+  return (
+    <div className="flex flex-col sm:flex-row items-center gap-6 h-[260px]">
+      <svg viewBox="0 0 180 180" className="w-44 h-44 -rotate-90 flex-shrink-0">
+        <circle cx="90" cy="90" r={radius} fill="none" stroke="#e2e8f0" strokeWidth="20" />
+        {total > 0 && data.filter((d) => d.value > 0).map((d) => {
+          const dash = (d.value / total) * circumference;
+          const dashOffset = -offsetAcc;
+          offsetAcc += dash;
+          return (
+            <circle
+              key={d.label}
+              cx="90" cy="90" r={radius}
+              fill="none"
+              stroke={d.color}
+              strokeWidth="20"
+              strokeDasharray={`${dash} ${circumference - dash}`}
+              strokeDashoffset={dashOffset}
+            />
+          );
+        })}
+      </svg>
+      <div className="space-y-2 w-full">
+        {data.map((d) => (
+          <div key={d.label} className="flex items-center gap-2 text-sm">
+            <span className="w-3 h-3 rounded-full inline-block flex-shrink-0" style={{ backgroundColor: d.color }} />
+            <span className="text-slate-600">{d.label}</span>
+            <span className="font-semibold text-slate-900 ml-auto">{d.value}</span>
+            <span className="text-slate-400 text-xs w-10 text-right">
+              {total > 0 ? Math.round((d.value / total) * 100) : 0}%
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function BarsChart({ data }: { data: { label: string; value: number }[] }) {
+  const max = Math.max(1, ...data.map((d) => d.value));
+
+  return (
+    <div className="flex items-end justify-between gap-2 h-[260px] px-1 pt-4">
+      {data.map((d) => (
+        <div key={d.label} className="flex flex-col items-center flex-1 h-full justify-end gap-2">
+          <span className="text-xs font-semibold text-slate-700">{d.value}</span>
+          <div
+            className="w-full max-w-10 bg-[#001f3f] rounded-t-md transition-all"
+            style={{ height: `${(d.value / max) * 100}%`, minHeight: d.value > 0 ? '4px' : '0' }}
+          />
+          <span className="text-[10px] text-slate-400">{d.label}</span>
+        </div>
+      ))}
+    </div>
   );
 }

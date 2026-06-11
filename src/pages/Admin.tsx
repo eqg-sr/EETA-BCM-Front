@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Layout from '../components/Layout';
 import api from '../services/api';
-import { AlertCircle, Search, UserPlus, UserMinus, Users, Link2, Loader2 } from 'lucide-react';
+import { AlertCircle, Search, UserPlus, UserMinus, Users, Link2, Loader2, ChevronDown, ChevronUp } from 'lucide-react';
 import { ROLE_LABELS, type Role } from '../context/AuthContext';
 
 type AdminUser = {
@@ -210,6 +210,7 @@ function AsignacionesTab() {
   const [causaLoading, setCausaLoading]   = useState(false);
   const [allCausas, setAllCausas]         = useState<CausaResult[]>([]);
   const [allCausasLoading, setAllCausasLoading] = useState(false);
+  const [causaListOpen, setCausaListOpen] = useState(false);
   const [selectedCausa, setSelectedCausa] = useState<CausaResult | null>(null);
   const [asignados, setAsignados]         = useState<Record<string, AssignedUser[]>>({});
   const [asigLoading, setAsigLoading]     = useState<Record<string, boolean>>({});
@@ -236,6 +237,7 @@ function AsignacionesTab() {
   const handleCausaInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     const q = e.target.value;
     setCausaSearch(q);
+    setCausaListOpen(true);
     if (causaDebounceRef.current) clearTimeout(causaDebounceRef.current);
     causaDebounceRef.current = setTimeout(() => searchCausas(q), 350);
   };
@@ -264,6 +266,7 @@ function AsignacionesTab() {
     setSelectedCausa(causa);
     setCausaSearch(causa.nroExpedienteElectronico || causa.identificador);
     setCausaResults([]);
+    setCausaListOpen(false);
     setAsignados({});
     setUserSearch({});
     setUserResults({});
@@ -324,12 +327,21 @@ function AsignacionesTab() {
             placeholder="Escribí carátula o nro. de expediente electrónico..."
             className="w-full pl-9 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#001f3f]/10 focus:border-[#001f3f] transition-all"
           />
-          {(causaLoading || allCausasLoading) && (
+          {(causaLoading || allCausasLoading) ? (
             <Loader2 size={16} className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin text-slate-400" />
+          ) : (
+            <button
+              type="button"
+              onClick={() => setCausaListOpen((open) => !open)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+            >
+              {causaListOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+            </button>
           )}
         </div>
 
         {(() => {
+          if (!causaListOpen) return null;
           const list = causaSearch.trim() ? causaResults : allCausas;
           if (list.length === 0) return null;
           return (

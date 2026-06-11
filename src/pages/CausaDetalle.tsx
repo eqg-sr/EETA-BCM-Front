@@ -193,7 +193,7 @@ export default function CausaDetalle() {
           </Section>
 
           <Section id="movimientos" title="Movimientos" icon={ListOrdered}>
-            <MovimientosBlock causaId={causa.id} movimientos={allMovimientos} />
+            <MovimientosBlock causaId={causa.id} movimientos={allMovimientos} sujetos={causa.sujetos} />
           </Section>
 
           <Section id="relacionadas" title="Causas Relacionadas" icon={Link2}>
@@ -247,7 +247,7 @@ function SujetosTable({ sujetos }: { sujetos: Sujeto[] }) {
             <th className="px-4 py-3 font-semibold">Representante</th>
             <th className="px-4 py-3 font-semibold">Domicilio</th>
             <th className="px-4 py-3 font-semibold">Domicilio Electrónico</th>
-            <th className="px-4 py-3 font-semibold">Estado</th>
+            {/* Estado de aprobación oculto: flujo de autorización por mail desactivado */}
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-100">
@@ -258,18 +258,6 @@ function SujetosTable({ sujetos }: { sujetos: Sujeto[] }) {
               <td className="px-4 py-3 text-blue-700">{s.representante ?? '-'}</td>
               <td className="px-4 py-3 text-blue-700">{s.domicilio ?? '-'}</td>
               <td className="px-4 py-3 text-blue-700 font-mono text-xs">{s.domicilioElectronico ?? '-'}</td>
-              <td className="px-4 py-3">
-                {s.aprobado === true && (
-                  <span className="inline-block px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700">
-                    Aprobado
-                  </span>
-                )}
-                {s.aprobado === false && (
-                  <span className="inline-block px-2.5 py-1 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-700">
-                    Pendiente de aprobación
-                  </span>
-                )}
-              </td>
             </tr>
           ))}
         </tbody>
@@ -583,9 +571,11 @@ const MOV_ARCHIVO_MAX_SIZE = 20 * 1024 * 1024;
 function MovimientosBlock({
   causaId,
   movimientos,
+  sujetos,
 }: {
   causaId: string;
   movimientos: Movimiento[];
+  sujetos: Sujeto[];
 }) {
   const { currentCausa, agregarMovimiento, agregarExpediente } = useCausas();
   const { user } = useAuth();
@@ -597,6 +587,7 @@ function MovimientosBlock({
   const [movTipo, setMovTipo]           = useState<MovimientoTipo>('ACT');
   const [movTitulo, setMovTitulo]       = useState('');
   const [movDescripcion, setMovDescripcion] = useState('');
+  const [movSujetoNombre, setMovSujetoNombre] = useState('');
   const [movArchivo, setMovArchivo]     = useState<File | null>(null);
   const [movArchivoError, setMovArchivoError] = useState<string | null>(null);
   const [isSending, setIsSending]       = useState(false);
@@ -643,12 +634,14 @@ function MovimientosBlock({
         tribunal:    'TRIBUNAL ARBITRAL BCM',
         presentante: user.name,
         acceso:      movTipo === 'ESC' ? 'Escrito de parte' : 'Resolución',
+        sujetoNombre: movSujetoNombre || undefined,
         archivo:     movArchivo ?? undefined,
       };
       await agregarMovimiento(causaId, nroExpediente, mov);
       setMovTipo('ACT');
       setMovTitulo('');
       setMovDescripcion('');
+      setMovSujetoNombre('');
       setMovArchivo(null);
       setMovArchivoError(null);
     } finally {
@@ -704,6 +697,18 @@ function MovimientosBlock({
                   required
                 />
               </div>
+            </div>
+            <div>
+              <select
+                value={movSujetoNombre}
+                onChange={(e) => setMovSujetoNombre(e.target.value)}
+                className="form-input text-sm"
+              >
+                <option value="">Sujeto que realiza (opcional)</option>
+                {sujetos.map((s) => (
+                  <option key={s.nombre} value={s.nombre}>{s.nombre}</option>
+                ))}
+              </select>
             </div>
             <div>
               <textarea
@@ -774,7 +779,12 @@ function MovimientosBlock({
                     <div className="text-xs text-slate-500 mt-0.5 leading-relaxed">{m.descripcion}</div>
                   )}
                 </td>
-                <td className="px-4 py-3 font-semibold text-slate-700">{m.tipo}</td>
+                <td className="px-4 py-3 font-semibold text-slate-700">
+                  {m.tipo}
+                  {m.sujetoNombre && (
+                    <div className="text-xs font-normal text-slate-500 mt-0.5">{m.sujetoNombre}</div>
+                  )}
+                </td>
                 <td className="px-4 py-3">
                   {m.nombreArchivo ? (
                     <button

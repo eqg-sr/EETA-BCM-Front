@@ -4,7 +4,7 @@ import { FolderOpen, Clock, UserCheck, ExternalLink, LayoutDashboard } from 'luc
 import Layout from '../components/Layout';
 import StatusBadge from '../components/StatusBadge';
 import api from '../services/api';
-import { useAuth } from '../context/AuthContext';
+import { useAuth, ROLE_LABELS } from '../context/AuthContext';
 import type { CausaStatus } from '../context/CausasContext';
 
 type CausaResumen = {
@@ -112,7 +112,7 @@ export default function Dashboard() {
           <h1 className="text-2xl font-extrabold tracking-tight text-slate-900">Inicio</h1>
         </div>
         <p className="text-slate-500 text-sm">
-          Bienvenido/a, {user?.name}.
+          Bienvenido/a, {user ? ROLE_LABELS[user.role] : ''}.
         </p>
       </div>
 

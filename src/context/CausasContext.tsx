@@ -31,6 +31,7 @@ export type Movimiento = {
   relaciones?: boolean;
   archivo?: string;
   nombreArchivo?: string;
+  sujetoNombre?: string;
 };
 
 export type NuevoMovimiento = Omit<Movimiento, 'archivo' | 'nombreArchivo'> & {

@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { FolderOpen, Plus, Search, ExternalLink, ChevronLeft, ChevronRight } from 'lucide-react';
+import { FolderOpen, Plus, Search, ExternalLink, ChevronLeft, ChevronRight, Download } from 'lucide-react';
 import Layout from '../components/Layout';
 import StatusBadge from '../components/StatusBadge';
-import { useCausas, type CausaStatus } from '../context/CausasContext';
+import { useCausas, type Causa, type CausaStatus } from '../context/CausasContext';
 import { usePermissions } from '../context/AuthContext';
+import api from '../services/api';
 
 const STATUS_OPTIONS: { value: CausaStatus; label: string }[] = [
   { value: 'pendiente',  label: 'Pendiente' },
@@ -41,6 +42,23 @@ export default function Causas() {
 
   const goToPage = (page: number) => {
     fetchCausas({ page, limit: causas.limit, search: query || undefined, status: statusFilter || undefined });
+  };
+
+  const handleDescargarCaratula = async (causa: Causa) => {
+    try {
+      const response = await api.get(
+        `/causas/${causa.id}/caratula/archivo`,
+        { responseType: 'blob' }
+      );
+      const url = URL.createObjectURL(response.data);
+      const a   = document.createElement('a');
+      a.href     = url;
+      a.download = causa.nombreArchivo ?? 'caratula.pdf';
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      alert('No se pudo descargar el archivo.');
+    }
   };
 
   return (
@@ -115,6 +133,7 @@ export default function Causas() {
                   <th className="px-4 py-3 font-semibold">Árbitro</th>
                   <th className="px-4 py-3 font-semibold">Estado</th>
                   <th className="px-4 py-3 font-semibold">Últ. movimiento</th>
+                  <th className="px-4 py-3 font-semibold">Adjunto</th>
                   <th className="px-4 py-3"></th>
                 </tr>
               </thead>
@@ -131,6 +150,19 @@ export default function Causas() {
                     <td className="px-4 py-3 text-slate-600 text-xs">{c.arbitro}</td>
                     <td className="px-4 py-3"><StatusBadge status={c.status} /></td>
                     <td className="px-4 py-3 text-slate-500 text-xs">{c.ultimoMovimiento}</td>
+                    <td className="px-4 py-3">
+                      {c.nombreArchivo ? (
+                        <button
+                          onClick={() => handleDescargarCaratula(c)}
+                          className="flex items-center gap-1 text-xs text-blue-700 hover:underline"
+                          title={c.nombreArchivo}
+                        >
+                          <Download size={13} />
+                        </button>
+                      ) : (
+                        <span className="text-slate-400">-</span>
+                      )}
+                    </td>
                     <td className="px-4 py-3 text-right">
                       <Link
                         to={`/causas/${c.id}`}

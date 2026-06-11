@@ -1,6 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { FolderOpen, Clock, UserCheck, ExternalLink, LayoutDashboard } from 'lucide-react';
+import { FolderOpen, Clock, UserCheck, ExternalLink, LayoutDashboard, PieChart as PieChartIcon, BarChart3 } from 'lucide-react';
+import {
+  PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid,
+} from 'recharts';
 import Layout from '../components/Layout';
 import StatusBadge from '../components/StatusBadge';
 import api from '../services/api';
@@ -30,6 +34,20 @@ const STATUS_CARD_CLASSES: Record<CausaStatus, string> = {
   cerrado:    'bg-green-50 text-green-700 border-green-100',
 };
 
+const STATUS_CHART_COLORS: Record<CausaStatus, string> = {
+  pendiente:  '#94a3b8',
+  iniciado:   '#2563eb',
+  en_proceso: '#d97706',
+  cerrado:    '#16a34a',
+};
+
+const STATUS_LABELS: Record<CausaStatus, string> = {
+  pendiente:  'Pendiente',
+  iniciado:   'Iniciado',
+  en_proceso: 'En proceso',
+  cerrado:    'Cerrado',
+};
+
 const TOTAL_LABELS: Record<string, string> = {
   secretario: 'Total de expedientes en el sistema',
   arbitro:    'Total de expedientes',
@@ -49,6 +67,35 @@ function formatFecha(raw?: string): string {
   return d.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
 
+const MESES_CORTOS = [
+  'ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic',
+];
+
+function buildExpedientesPorMes(causas: { fechaInicio?: string }[], meses = 6) {
+  const now = new Date();
+  const buckets: { key: string; label: string; cantidad: number }[] = [];
+
+  for (let i = meses - 1; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    buckets.push({
+      key: `${d.getFullYear()}-${d.getMonth()}`,
+      label: `${MESES_CORTOS[d.getMonth()]} ${d.getFullYear()}`,
+      cantidad: 0,
+    });
+  }
+
+  const byKey = new Map(buckets.map((b) => [b.key, b]));
+  for (const c of causas) {
+    if (!c.fechaInicio) continue;
+    const d = new Date(c.fechaInicio);
+    if (isNaN(d.getTime())) continue;
+    const bucket = byKey.get(`${d.getFullYear()}-${d.getMonth()}`);
+    if (bucket) bucket.cantidad++;
+  }
+
+  return buckets;
+}
+
 export default function Dashboard() {
   const { user } = useAuth();
   const isSecretario = user?.role === 'secretario';
@@ -59,6 +106,7 @@ export default function Dashboard() {
   const [statusCounts, setStatusCounts] = useState<Record<CausaStatus, number>>(EMPTY_COUNTS);
   const [recientes, setRecientes]     = useState<CausaResumen[]>([]);
   const [pendientesUsuarios, setPendientesUsuarios] = useState(0);
+  const [porMes, setPorMes] = useState<{ key: string; label: string; cantidad: number }[]>([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -85,6 +133,7 @@ export default function Dashboard() {
           if (c.status in counts) counts[c.status as CausaStatus]++;
         }
         setStatusCounts(counts);
+        setPorMes(buildExpedientesPorMes(allRes.data.data ?? []));
 
         if (pendientesRes) setPendientesUsuarios((pendientesRes.data ?? []).length);
       })
@@ -157,6 +206,61 @@ export default function Dashboard() {
             </div>
           </Link>
         )}
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-8">
+        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+          <div className="flex items-center gap-2 text-[#001f3f] mb-4">
+            <PieChartIcon size={18} className="text-blue-600" />
+            <h2 className="font-bold uppercase tracking-wider text-xs">Distribución por estado</h2>
+          </div>
+          {total > 0 ? (
+            <ResponsiveContainer width="100%" height={260}>
+              <PieChart>
+                <Pie
+                  data={STATUS_OPTIONS.map((s) => ({ name: STATUS_LABELS[s.value], value: statusCounts[s.value], status: s.value }))}
+                  dataKey="value"
+                  nameKey="name"
+                  innerRadius={60}
+                  outerRadius={90}
+                  paddingAngle={2}
+                >
+                  {STATUS_OPTIONS.map((s) => (
+                    <Cell key={s.value} fill={STATUS_CHART_COLORS[s.value]} />
+                  ))}
+                </Pie>
+                <Tooltip />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="flex items-center justify-center h-[260px] text-sm text-slate-400">
+              Sin datos para mostrar.
+            </div>
+          )}
+        </div>
+
+        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+          <div className="flex items-center gap-2 text-[#001f3f] mb-4">
+            <BarChart3 size={18} className="text-blue-600" />
+            <h2 className="font-bold uppercase tracking-wider text-xs">Expedientes iniciados por mes</h2>
+          </div>
+          {porMes.some((m) => m.cantidad > 0) ? (
+            <ResponsiveContainer width="100%" height={260}>
+              <BarChart data={porMes}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                <XAxis dataKey="label" tick={{ fontSize: 12 }} />
+                <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
+                <Tooltip />
+                <Bar dataKey="cantidad" name="Expedientes" fill="#001f3f" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="flex items-center justify-center h-[260px] text-sm text-slate-400">
+              Sin datos para mostrar.
+            </div>
+          )}
+        </div>
       </div>
 
       <div>

@@ -141,7 +141,7 @@ export default function Causas() {
                 {causas.data.map((c) => (
                   <tr key={c.id} className="hover:bg-slate-50 transition-colors">
                     <td className="px-4 py-3 font-mono text-[#001f3f] font-semibold">
-                      {c.identificador} <span className="text-slate-400">({c.numeroInterno})</span>
+                      {c.nroExpedienteElectronico || c.identificador}
                     </td>
                     <td className="px-4 py-3 font-semibold text-slate-800 max-w-md truncate" title={c.caratula}>
                       {c.caratula}

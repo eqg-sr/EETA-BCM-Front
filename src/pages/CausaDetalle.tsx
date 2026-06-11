@@ -608,6 +608,7 @@ function MovimientosBlock({
   const [movArchivo, setMovArchivo]     = useState<File | null>(null);
   const [movArchivoError, setMovArchivoError] = useState<string | null>(null);
   const [isSending, setIsSending]       = useState(false);
+  const [movError, setMovError]         = useState<string | null>(null);
 
   const handleArchivoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] ?? null;
@@ -625,6 +626,7 @@ function MovimientosBlock({
     e.preventDefault();
     if (!movTitulo.trim() || (!movDescripcion.trim() && !movArchivo) || !user || !currentCausa) return;
     setIsSending(true);
+    setMovError(null);
     try {
       let nroExpediente = expediente?.nroExpediente;
       if (!nroExpediente) {
@@ -661,6 +663,8 @@ function MovimientosBlock({
       setMovSujetoNombre('');
       setMovArchivo(null);
       setMovArchivoError(null);
+    } catch (err: any) {
+      setMovError(err?.response?.data?.message || 'No se pudo registrar el movimiento.');
     } finally {
       setIsSending(false);
     }
@@ -765,6 +769,9 @@ function MovimientosBlock({
                 <p className="text-[11px] text-red-600 mt-1">{movArchivoError}</p>
               )}
             </div>
+            {movError && (
+              <p className="text-[11px] text-red-600">{movError}</p>
+            )}
             <button
               type="submit"
               disabled={!movTitulo.trim() || (!movDescripcion.trim() && !movArchivo) || isSending}

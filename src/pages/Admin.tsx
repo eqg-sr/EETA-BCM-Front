@@ -16,6 +16,7 @@ type AdminUser = {
 type CausaResult = {
   id: string;
   identificador: string;
+  nroExpedienteElectronico?: string;
   caratula: string;
   expedientes: { nroExpediente: string; caratula: string }[];
 };
@@ -251,7 +252,7 @@ function AsignacionesTab() {
 
   const selectCausa = async (causa: CausaResult) => {
     setSelectedCausa(causa);
-    setCausaSearch(causa.identificador);
+    setCausaSearch(causa.nroExpedienteElectronico || causa.identificador);
     setCausaResults([]);
     setAsignados({});
     setUserSearch({});
@@ -310,7 +311,7 @@ function AsignacionesTab() {
             type="text"
             value={causaSearch}
             onChange={handleCausaInput}
-            placeholder="Escribí carátula o identificador..."
+            placeholder="Escribí carátula o nro. de expediente electrónico..."
             className="w-full pl-9 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#001f3f]/10 focus:border-[#001f3f] transition-all"
           />
           {causaLoading && (
@@ -326,7 +327,7 @@ function AsignacionesTab() {
                 onClick={() => selectCausa(c)}
                 className="w-full text-left px-4 py-3 hover:bg-slate-50 border-b border-slate-100 last:border-0 transition-colors"
               >
-                <div className="text-xs font-mono text-[#001f3f] font-semibold">{c.identificador}</div>
+                <div className="text-xs font-mono text-[#001f3f] font-semibold">{c.nroExpedienteElectronico || c.identificador}</div>
                 <div className="text-sm text-slate-700">{c.caratula}</div>
               </button>
             ))}
@@ -337,7 +338,7 @@ function AsignacionesTab() {
       {selectedCausa && (
         <div className="space-y-4">
           <div className="flex items-center gap-2 pb-2 border-b border-slate-200">
-            <h3 className="text-sm font-bold text-[#001f3f]">{selectedCausa.identificador}</h3>
+            <h3 className="text-sm font-bold text-[#001f3f]">{selectedCausa.nroExpedienteElectronico || selectedCausa.identificador}</h3>
             <span className="text-slate-400 text-sm">—</span>
             <span className="text-sm text-slate-600">{selectedCausa.caratula}</span>
           </div>
@@ -399,7 +400,7 @@ function AsignacionesTab() {
                       )}
                     </div>
                     {(userResults[exp.nroExpediente] ?? []).length > 0 && (
-                      <div className="absolute z-10 mt-1 w-full bg-white border border-slate-200 rounded-xl shadow-lg overflow-hidden">
+                      <div className="absolute z-10 mt-1 w-full max-h-60 overflow-y-auto bg-white border border-slate-200 rounded-xl shadow-lg">
                         {(userResults[exp.nroExpediente] ?? []).map((u) => (
                           <button
                             key={u._id}

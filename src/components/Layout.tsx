@@ -25,7 +25,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       <header className="sticky top-0 z-50 bg-[#001f3f] text-white shadow-lg px-6 py-3 flex justify-between items-center">
 
         <div className="flex items-center gap-6">
-          <Link to="/dashboard" className="flex items-center gap-3">
+          <Link to={user?.role === 'secretario' ? '/dashboard' : '/causas'} className="flex items-center gap-3">
             <div className="p-1.5 rounded-lg">
               <img src={logo} alt="Logo" className="w-48 h-12 object-contain" />
             </div>
@@ -36,15 +36,17 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
           {user && (
             <nav className="flex items-center gap-1 ml-4">
-              <Link
-                to="/dashboard"
-                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
-                  isActive('/dashboard') ? 'bg-white/15 text-white' : 'text-white/70 hover:bg-white/10 hover:text-white'
-                }`}
-              >
-                <Home size={16} />
-                Dashboard
-              </Link>
+              {user.role === 'secretario' && (
+                <Link
+                  to="/dashboard"
+                  className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
+                    isActive('/dashboard') ? 'bg-white/15 text-white' : 'text-white/70 hover:bg-white/10 hover:text-white'
+                  }`}
+                >
+                  <Home size={16} />
+                  Dashboard
+                </Link>
+              )}
               <Link
                 to="/causas"
                 className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${

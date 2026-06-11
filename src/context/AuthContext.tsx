@@ -4,6 +4,7 @@ import api from '../services/api';
 export type Role = 'arbitro' | 'demandado' | 'actor' | 'secretario' | 'perito';
 
 export type User = {
+  _id: string;
   email: string;
   name: string;
   role: Role;
@@ -33,7 +34,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     api.get<User>('/auth/self')
       .then((res) => {
         setToken(stored);
-        setUser({ email: res.data.email, name: res.data.name, role: res.data.role, activo: res.data.activo, aprobado: res.data.aprobado });
+        setUser({ _id: res.data._id, email: res.data.email, name: res.data.name, role: res.data.role, activo: res.data.activo, aprobado: res.data.aprobado });
       })
       .catch(() => {
         localStorage.removeItem('token');
@@ -46,7 +47,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem('token', data.token);
     setToken(data.token);
     const me = await api.get<User>('/auth/self');
-    setUser({ email: me.data.email, name: me.data.name, role: me.data.role, activo: me.data.activo, aprobado: me.data.aprobado });
+    setUser({ _id: me.data._id, email: me.data.email, name: me.data.name, role: me.data.role, activo: me.data.activo, aprobado: me.data.aprobado });
   };
 
   const logout = () => {

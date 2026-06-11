@@ -596,10 +596,12 @@ function MovimientosBlock({
 }) {
   const { currentCausa, agregarMovimiento, agregarExpediente } = useCausas();
   const { user } = useAuth();
-  const { isReadOnly } = usePermissions();
-  const isSecretario = user?.role === 'secretario' && !isReadOnly;
 
   const expediente = currentCausa?.expedientes[0];
+
+  const isAsignado = !!user?._id && !!expediente?.asignados?.includes(user._id);
+  const puedeCargarMovimiento =
+    user?.role === 'secretario' || user?.role === 'arbitro' || isAsignado;
 
   const [movTipo, setMovTipo]           = useState<MovimientoTipo>('ACT');
   const [movTitulo, setMovTitulo]       = useState('');
@@ -690,7 +692,7 @@ function MovimientosBlock({
 
   return (
     <div className="space-y-6">
-      {isSecretario && currentCausa && (
+      {puedeCargarMovimiento && currentCausa && (
         <div className="bg-slate-50 rounded-2xl border border-slate-200 p-5">
           <h3 className="text-xs font-bold uppercase tracking-wider text-[#001f3f] mb-3 flex items-center gap-2">
             <FilePlus size={14} className="text-blue-600" />

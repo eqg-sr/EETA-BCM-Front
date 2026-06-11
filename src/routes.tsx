@@ -17,7 +17,7 @@ export default function AppRoutes() {
 
   const requireAuth       = (el: React.ReactNode) => (user ? el : <Navigate to="/login" />);
   const requireSecretario = (el: React.ReactNode) =>
-    user?.role === 'secretario' ? el : user ? <Navigate to="/dashboard" /> : <Navigate to="/login" />;
+    user?.role === 'secretario' ? el : user ? <Navigate to="/causas" /> : <Navigate to="/login" />;
 
   return (
     <Routes>
@@ -26,13 +26,13 @@ export default function AppRoutes() {
       <Route path="/help"      element={<HelpCenter />} />
       <Route path="/autorizar" element={<Autorizar />} />
 
-      <Route path="/dashboard"   element={requireAuth(<Dashboard />)} />
+      <Route path="/dashboard"   element={requireSecretario(<Dashboard />)} />
       <Route path="/causas"      element={requireAuth(<Causas />)} />
       <Route path="/causas/new"  element={requireAuth(<NuevaCausa />)} />
       <Route path="/causas/:id"  element={requireAuth(<CausaDetalle />)} />
       <Route path="/admin"       element={requireSecretario(<Admin />)} />
 
-      <Route path="*" element={<Navigate to="/dashboard" />} />
+      <Route path="*" element={user?.role === 'secretario' ? <Navigate to="/dashboard" /> : <Navigate to="/causas" />} />
     </Routes>
   );
 }

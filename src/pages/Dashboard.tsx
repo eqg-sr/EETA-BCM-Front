@@ -155,7 +155,7 @@ export default function Dashboard() {
       <div className="mb-8">
         <div className="flex items-center gap-2 text-[#001f3f] mb-1">
           <LayoutDashboard size={24} strokeWidth={2.5} />
-          <h1 className="text-2xl font-extrabold tracking-tight text-slate-900">Inicio</h1>
+          <h1 className="text-2xl font-extrabold tracking-tight text-slate-900">Dashboard</h1>
         </div>
         <p className="text-slate-500 text-sm">
           Bienvenido/a, {user ? ROLE_LABELS[user.role] : ''}.

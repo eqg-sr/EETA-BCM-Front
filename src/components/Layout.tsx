@@ -43,7 +43,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 }`}
               >
                 <Home size={16} />
-                Inicio
+                Dashboard
               </Link>
               <Link
                 to="/causas"

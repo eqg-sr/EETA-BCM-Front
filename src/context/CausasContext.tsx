@@ -90,6 +90,7 @@ export type Causa = {
   numeroInterno: string;
   caratula: string;
   tribunal: string;
+  nroExpedienteElectronico?: string;
   arbitro: string;
   fechaPresentacion: string;
   fechaInicio: string;

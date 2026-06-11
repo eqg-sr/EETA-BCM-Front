@@ -11,6 +11,7 @@ export default function NuevaCausa() {
   const { canCreateCausa } = usePermissions();
 
   const [caratula, setCaratula]               = useState('');
+  const [nroExpedienteElectronico, setNroExpedienteElectronico] = useState('');
   const [arbitro, setArbitro]                 = useState('');
   const [fechaPresentacion, setFechaPresentacion] = useState('');
   const [fechaInicio, setFechaInicio]         = useState('');
@@ -49,6 +50,7 @@ export default function NuevaCausa() {
       const causa = await crearCausa({
         id:                `CAU-${Date.now()}`,
         caratula,
+        nroExpedienteElectronico: nroExpedienteElectronico || undefined,
         arbitro,
         fechaPresentacion,
         fechaInicio,
@@ -122,6 +124,14 @@ export default function NuevaCausa() {
                   placeholder="Ej: Incumplimiento contractual"
                   className="form-input"
                   required
+                />
+              </Field>
+              <Field label="Nro. Expediente Electrónico">
+                <input
+                  value={nroExpedienteElectronico}
+                  onChange={(e) => setNroExpedienteElectronico(e.target.value)}
+                  placeholder="Ej: EE-2026-12345678-BCM"
+                  className="form-input"
                 />
               </Field>
             </div>

@@ -2,6 +2,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Autorizar from './pages/Autorizar';
+import Dashboard from './pages/Dashboard';
 import Causas from './pages/Causas';
 import NuevaCausa from './pages/NuevaCausa';
 import CausaDetalle from './pages/CausaDetalle';
@@ -16,7 +17,7 @@ export default function AppRoutes() {
 
   const requireAuth       = (el: React.ReactNode) => (user ? el : <Navigate to="/login" />);
   const requireSecretario = (el: React.ReactNode) =>
-    user?.role === 'secretario' ? el : user ? <Navigate to="/causas" /> : <Navigate to="/login" />;
+    user?.role === 'secretario' ? el : user ? <Navigate to="/dashboard" /> : <Navigate to="/login" />;
 
   return (
     <Routes>
@@ -25,12 +26,13 @@ export default function AppRoutes() {
       <Route path="/help"      element={<HelpCenter />} />
       <Route path="/autorizar" element={<Autorizar />} />
 
+      <Route path="/dashboard"   element={requireAuth(<Dashboard />)} />
       <Route path="/causas"      element={requireAuth(<Causas />)} />
       <Route path="/causas/new"  element={requireAuth(<NuevaCausa />)} />
       <Route path="/causas/:id"  element={requireAuth(<CausaDetalle />)} />
       <Route path="/admin"       element={requireSecretario(<Admin />)} />
 
-      <Route path="*" element={<Navigate to="/causas" />} />
+      <Route path="*" element={<Navigate to="/dashboard" />} />
     </Routes>
   );
 }

@@ -160,6 +160,9 @@ export default function CausaDetalle() {
               <InfoRow label="Identificador"        value={`${causa.identificador} (${causa.numeroInterno})`} />
               <InfoRow label="Carátula"             value={causa.caratula} />
               <InfoRow label="Tribunal"             value={causa.tribunal} />
+              {causa.nroExpedienteElectronico && (
+                <InfoRow label="Nro. Expediente Electrónico" value={causa.nroExpedienteElectronico} />
+              )}
               <InfoRow label="Árbitro"              value={causa.arbitro} />
               <InfoRow label="Fecha de Presentación" value={causa.fechaPresentacion} />
               <InfoRow label="Fecha de Inicio"      value={causa.fechaInicio} />

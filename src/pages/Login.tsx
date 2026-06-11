@@ -21,7 +21,7 @@ export default function Login() {
     setIsLoading(true);
     try {
       await login(email.trim(), password);
-      nav('/causas');
+      nav('/dashboard');
     } catch (err) {
       if (axios.isAxiosError(err) && err.response?.status === 403) {
         setError(err.response.data?.message ?? 'Acceso denegado.');

@@ -207,7 +207,6 @@ function ActionBtn({ label, loading, className, onClick }: { label: string; load
 function AsignacionesTab() {
   const [causaSearch, setCausaSearch]     = useState('');
   const [causaResults, setCausaResults]   = useState<CausaResult[]>([]);
-  const [causaLoading, setCausaLoading]   = useState(false);
   const [allCausas, setAllCausas]         = useState<CausaResult[]>([]);
   const [allCausasLoading, setAllCausasLoading] = useState(false);
   const [causaListOpen, setCausaListOpen] = useState(false);
@@ -218,28 +217,17 @@ function AsignacionesTab() {
   const [userResults, setUserResults]     = useState<Record<string, AdminUser[]>>({});
   const [userSearchLoading, setUserSearchLoading] = useState<Record<string, boolean>>({});
 
-  const causaDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const userDebounceRefs = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
-
-  const searchCausas = useCallback(async (q: string) => {
-    if (!q.trim()) { setCausaResults([]); return; }
-    setCausaLoading(true);
-    try {
-      const { data } = await api.get<{ data: CausaResult[] }>('/causas', { params: { search: q, limit: 8 } });
-      setCausaResults(data.data ?? []);
-    } catch {
-      setCausaResults([]);
-    } finally {
-      setCausaLoading(false);
-    }
-  }, []);
 
   const handleCausaInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     const q = e.target.value;
     setCausaSearch(q);
     setCausaListOpen(true);
-    if (causaDebounceRef.current) clearTimeout(causaDebounceRef.current);
-    causaDebounceRef.current = setTimeout(() => searchCausas(q), 350);
+    const term = q.trim().toLowerCase();
+    if (!term) { setCausaResults([]); return; }
+    setCausaResults(
+      allCausas.filter((c) => (c.nroExpedienteElectronico ?? '').toLowerCase().includes(term))
+    );
   };
 
   useEffect(() => {
@@ -327,7 +315,7 @@ function AsignacionesTab() {
             placeholder="Escribí carátula o nro. de expediente electrónico..."
             className="w-full pl-9 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#001f3f]/10 focus:border-[#001f3f] transition-all"
           />
-          {(causaLoading || allCausasLoading) ? (
+          {allCausasLoading ? (
             <Loader2 size={16} className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin text-slate-400" />
           ) : (
             <button

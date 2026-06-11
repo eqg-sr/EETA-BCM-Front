@@ -47,8 +47,8 @@ const STATUS_LABELS: Record<CausaStatus, string> = {
 
 const TOTAL_LABELS: Record<string, string> = {
   secretario: 'Total de expedientes en el sistema',
-  arbitro:    'Total de expedientes',
-  perito:     'Total de expedientes visibles',
+  arbitro:    'Total de expedientes asignados',
+  perito:     'Total de expedientes asignados',
   actor:      'Total de expedientes asignados',
   demandado:  'Total de expedientes asignados',
 };

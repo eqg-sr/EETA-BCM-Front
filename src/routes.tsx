@@ -26,13 +26,13 @@ export default function AppRoutes() {
       <Route path="/help"      element={<HelpCenter />} />
       <Route path="/autorizar" element={<Autorizar />} />
 
-      <Route path="/dashboard"   element={requireSecretario(<Dashboard />)} />
+      <Route path="/dashboard"   element={requireAuth(<Dashboard />)} />
       <Route path="/causas"      element={requireAuth(<Causas />)} />
       <Route path="/causas/new"  element={requireAuth(<NuevaCausa />)} />
       <Route path="/causas/:id"  element={requireAuth(<CausaDetalle />)} />
       <Route path="/admin"       element={requireSecretario(<Admin />)} />
 
-      <Route path="*" element={user?.role === 'secretario' ? <Navigate to="/dashboard" /> : <Navigate to="/causas" />} />
+      <Route path="*" element={<Navigate to="/dashboard" />} />
     </Routes>
   );
 }

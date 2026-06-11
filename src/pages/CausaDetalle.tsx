@@ -513,7 +513,7 @@ function CausasRelacionadasBlock({
         <table className="w-full text-sm">
           <thead className="bg-slate-50 text-left">
             <tr className="text-blue-700 text-xs uppercase tracking-wider">
-              <th className="px-4 py-3 font-semibold">Identificador</th>
+              <th className="px-4 py-3 font-semibold">Nro. Expediente Electrónico</th>
               <th className="px-4 py-3 font-semibold">Descripción</th>
               <th className="px-4 py-3 font-semibold">Archivo</th>
               <th className="px-4 py-3 font-semibold">Fecha</th>

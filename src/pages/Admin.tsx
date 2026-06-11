@@ -256,7 +256,7 @@ function AsignacionesTab() {
     setAsignados({});
     setUserSearch({});
     setUserResults({});
-    for (const exp of causa.expedientes) {
+    for (const exp of causa.expedientes ?? []) {
       await fetchAsignados(causa.id, exp.nroExpediente);
     }
   };
@@ -342,11 +342,11 @@ function AsignacionesTab() {
             <span className="text-sm text-slate-600">{selectedCausa.caratula}</span>
           </div>
 
-          {selectedCausa.expedientes.length === 0 && (
+          {(selectedCausa.expedientes ?? []).length === 0 && (
             <p className="text-slate-400 text-sm">Esta causa no tiene expedientes.</p>
           )}
 
-          {selectedCausa.expedientes.map((exp) => (
+          {(selectedCausa.expedientes ?? []).map((exp) => (
             <div key={exp.nroExpediente} className="bg-slate-50 rounded-2xl border border-slate-200 p-5 space-y-4">
               <div>
                 <div className="text-xs font-mono text-[#001f3f] font-semibold">{exp.nroExpediente}</div>

@@ -15,7 +15,7 @@ export type Sujeto = {
   aprobacionToken?: string;
 };
 
-export type MovimientoTipo = 'ACT' | 'ESC' | 'CED' | 'RES' | 'NOT' | 'AUD' | 'PER';
+export type MovimientoTipo = 'ACT' | 'ESC' | 'CED' | 'RES' | 'NOT' | 'AUD' | 'PER' | 'SEN';
 
 export type Movimiento = {
   id: string;
@@ -120,10 +120,11 @@ export type FetchCausasParams = {
   status?: CausaStatus;
 };
 
-type CreateCausaPayload = Omit<Causa, 'identificador' | 'numeroInterno' | 'expedientes' | 'causasRelacionadas' | 'sujetos'> & {
+type CreateCausaPayload = Omit<Causa, 'identificador' | 'numeroInterno' | 'expedientes' | 'causasRelacionadas' | 'sujetos' | 'tribunal'> & {
   sujetos?: Sujeto[];
   expedientes?: Expediente[];
   causasRelacionadas?: CausaRelacionada[];
+  tribunal?: string;
 };
 
 type CausasContextType = {

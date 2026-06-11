@@ -571,6 +571,7 @@ const MOVIMIENTO_TIPO_LABELS: Record<MovimientoTipo, string> = {
   NOT: 'Notificación',
   AUD: 'Audiencia',
   PER: 'Pericia',
+  SEN: 'Sentencia',
 };
 
 const DESCRIPCION_MAX = 2000;
@@ -756,7 +757,6 @@ function MovimientosBlock({
             <tr className="text-blue-700 text-xs uppercase tracking-wider">
               <th className="px-4 py-3 font-semibold">Fecha</th>
               <th className="px-4 py-3 font-semibold">Descripción</th>
-              <th className="px-4 py-3 font-semibold">Origen - Destino</th>
               <th className="px-4 py-3 font-semibold">Tipo</th>
               <th className="px-4 py-3 font-semibold">Adjunto</th>
             </tr>
@@ -770,9 +770,6 @@ function MovimientosBlock({
                   {m.descripcion && (
                     <div className="text-xs text-slate-500 mt-0.5 leading-relaxed">{m.descripcion}</div>
                   )}
-                </td>
-                <td className="px-4 py-3 text-slate-600 text-xs">
-                  Origen: TRIBUNAL ARBITRAL BCM - Destino: {m.tribunal ?? 'TRIBUNAL ARBITRAL BCM'}
                 </td>
                 <td className="px-4 py-3 font-semibold text-slate-700">{m.tipo}</td>
                 <td className="px-4 py-3">
@@ -792,7 +789,7 @@ function MovimientosBlock({
             ))}
             {movimientos.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-4 py-10 text-center text-slate-400 text-sm">
+                <td colSpan={4} className="px-4 py-10 text-center text-slate-400 text-sm">
                   Sin movimientos registrados.
                 </td>
               </tr>

@@ -5,20 +5,12 @@ import Layout from '../components/Layout';
 import { useCausas, type Sujeto } from '../context/CausasContext';
 import { usePermissions } from '../context/AuthContext';
 
-const SALAS = [
-  'TRIBUNAL ARBITRAL BCM – SALA COMERCIAL',
-  'TRIBUNAL ARBITRAL BCM – SALA SOCIETARIA',
-  'TRIBUNAL ARBITRAL BCM – SALA DE COMERCIO EXTERIOR',
-  'TRIBUNAL ARBITRAL BCM – SALA DE CONCURSOS Y QUIEBRAS',
-];
-
 export default function NuevaCausa() {
   const navigate = useNavigate();
   const { crearCausa, subirCaratulaArchivo } = useCausas();
   const { canCreateCausa } = usePermissions();
 
   const [caratula, setCaratula]               = useState('');
-  const [tribunal, setTribunal]               = useState(SALAS[0]);
   const [arbitro, setArbitro]                 = useState('');
   const [fechaPresentacion, setFechaPresentacion] = useState('');
   const [fechaInicio, setFechaInicio]         = useState('');
@@ -57,7 +49,6 @@ export default function NuevaCausa() {
       const causa = await crearCausa({
         id:                `CAU-${Date.now()}`,
         caratula,
-        tribunal,
         arbitro,
         fechaPresentacion,
         fechaInicio,
@@ -150,21 +141,10 @@ export default function NuevaCausa() {
           <div className="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm space-y-5">
             <div className="flex items-center gap-2 text-[#001f3f] mb-2">
               <Gavel size={18} className="text-blue-600" />
-              <h2 className="font-bold uppercase tracking-wider text-xs">Tribunal y Árbitro</h2>
+              <h2 className="font-bold uppercase tracking-wider text-xs">Árbitro</h2>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Field label="Sala / Tribunal" required>
-                <select
-                  value={tribunal}
-                  onChange={(e) => setTribunal(e.target.value)}
-                  className="form-input"
-                >
-                  {SALAS.map((s) => (
-                    <option key={s} value={s}>{s}</option>
-                  ))}
-                </select>
-              </Field>
               <Field label="Árbitro designado/a">
                 <input
                   value={arbitro}

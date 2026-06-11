@@ -12,7 +12,9 @@ export default function NuevaCausa() {
 
   const [caratula, setCaratula]               = useState('');
   const [nroExpedienteElectronico, setNroExpedienteElectronico] = useState('');
-  const [arbitro, setArbitro]                 = useState('');
+  const [arbitro1, setArbitro1]               = useState('');
+  const [arbitro2, setArbitro2]               = useState('');
+  const [arbitro3, setArbitro3]               = useState('');
   const [fechaPresentacion, setFechaPresentacion] = useState('');
   const [fechaInicio, setFechaInicio]         = useState('');
   const [objetoJuicio, setObjetoJuicio]       = useState('');
@@ -51,7 +53,7 @@ export default function NuevaCausa() {
         id:                `CAU-${Date.now()}`,
         caratula,
         nroExpedienteElectronico: nroExpedienteElectronico || undefined,
-        arbitro,
+        arbitros: [arbitro1, arbitro2, arbitro3].filter(Boolean),
         fechaPresentacion,
         fechaInicio,
         ultimoMovimiento:  fechaInicio || fechaPresentacion,
@@ -151,15 +153,31 @@ export default function NuevaCausa() {
           <div className="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm space-y-5">
             <div className="flex items-center gap-2 text-[#001f3f] mb-2">
               <Gavel size={18} className="text-blue-600" />
-              <h2 className="font-bold uppercase tracking-wider text-xs">Árbitro</h2>
+              <h2 className="font-bold uppercase tracking-wider text-xs">Árbitros Designados</h2>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Field label="Árbitro designado/a">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <Field label="Árbitro 1">
                 <input
-                  value={arbitro}
-                  onChange={(e) => setArbitro(e.target.value)}
-                  placeholder="Ej: DRA. ANALÍA PÉREZ DE OLIVERA (a designar si vacío)"
+                  value={arbitro1}
+                  onChange={(e) => setArbitro1(e.target.value)}
+                  placeholder="Ej: DRA. ANALÍA PÉREZ DE OLIVERA"
+                  className="form-input"
+                />
+              </Field>
+              <Field label="Árbitro 2">
+                <input
+                  value={arbitro2}
+                  onChange={(e) => setArbitro2(e.target.value)}
+                  placeholder="(opcional)"
+                  className="form-input"
+                />
+              </Field>
+              <Field label="Árbitro 3">
+                <input
+                  value={arbitro3}
+                  onChange={(e) => setArbitro3(e.target.value)}
+                  placeholder="(opcional)"
                   className="form-input"
                 />
               </Field>

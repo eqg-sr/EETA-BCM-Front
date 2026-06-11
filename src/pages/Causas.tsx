@@ -130,7 +130,7 @@ export default function Causas() {
                   <th className="px-4 py-3 font-semibold">Identificador</th>
                   <th className="px-4 py-3 font-semibold">Carátula</th>
                   <th className="px-4 py-3 font-semibold">Tribunal</th>
-                  <th className="px-4 py-3 font-semibold">Árbitro</th>
+                  <th className="px-4 py-3 font-semibold">Árbitros</th>
                   <th className="px-4 py-3 font-semibold">Estado</th>
                   <th className="px-4 py-3 font-semibold">Últ. movimiento</th>
                   <th className="px-4 py-3 font-semibold">Adjunto</th>
@@ -147,7 +147,16 @@ export default function Causas() {
                       {c.caratula}
                     </td>
                     <td className="px-4 py-3 text-slate-600 text-xs">{c.tribunal}</td>
-                    <td className="px-4 py-3 text-slate-600 text-xs">{c.arbitro}</td>
+                    <td className="px-4 py-3 text-slate-600 text-xs">
+                      {c.arbitros && c.arbitros.length > 0 ? (
+                        <>
+                          {c.arbitros[0]}
+                          {c.arbitros.length > 1 && (
+                            <span className="text-slate-400"> +{c.arbitros.length - 1} más</span>
+                          )}
+                        </>
+                      ) : '-'}
+                    </td>
                     <td className="px-4 py-3"><StatusBadge status={c.status} /></td>
                     <td className="px-4 py-3 text-slate-500 text-xs">{c.ultimoMovimiento}</td>
                     <td className="px-4 py-3">

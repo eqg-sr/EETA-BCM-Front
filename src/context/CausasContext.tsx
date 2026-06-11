@@ -13,6 +13,7 @@ export type Sujeto = {
   domicilioElectronico?: string;
   aprobado?: boolean;
   aprobacionToken?: string;
+  calidad?: string;
 };
 
 export type MovimientoTipo = 'ACT' | 'ESC' | 'CED' | 'RES' | 'NOT' | 'AUD' | 'PER' | 'SEN';
@@ -92,7 +93,7 @@ export type Causa = {
   caratula: string;
   tribunal: string;
   nroExpedienteElectronico?: string;
-  arbitro: string;
+  arbitros?: string[];
   fechaPresentacion: string;
   fechaInicio: string;
   ultimoMovimiento: string;

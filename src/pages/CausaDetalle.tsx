@@ -64,6 +64,7 @@ export default function CausaDetalle() {
 
   const causa = currentCausa;
   const allMovimientos = causa.expedientes.flatMap((e) => e.movimientos);
+  const arbitrosStr = causa.arbitros && causa.arbitros.length > 0 ? causa.arbitros.join(', ') : '-';
 
   const handleStatusChange = async (newStatus: CausaStatus) => {
     if (!id) return;
@@ -132,8 +133,8 @@ export default function CausaDetalle() {
           )}
         </div>
         <div className="text-right text-xs">
-          <div className="text-slate-400 uppercase font-semibold">Árbitro</div>
-          <div className="text-slate-700 font-semibold">{causa.arbitro}</div>
+          <div className="text-slate-400 uppercase font-semibold">Árbitros Designados</div>
+          <div className="text-slate-700 font-semibold">{arbitrosStr}</div>
         </div>
       </div>
 
@@ -163,7 +164,7 @@ export default function CausaDetalle() {
               {causa.nroExpedienteElectronico && (
                 <InfoRow label="Nro. Expediente Electrónico" value={causa.nroExpedienteElectronico} />
               )}
-              <InfoRow label="Árbitro"              value={causa.arbitro} />
+              <InfoRow label="Árbitros Designados"  value={arbitrosStr} />
               <InfoRow label="Fecha de Presentación" value={causa.fechaPresentacion} />
               <InfoRow label="Fecha de Inicio"      value={causa.fechaInicio} />
               <InfoRow label="Último Movimiento"    value={causa.ultimoMovimiento} />
@@ -253,7 +254,12 @@ function SujetosTable({ sujetos }: { sujetos: Sujeto[] }) {
         <tbody className="divide-y divide-slate-100">
           {sujetos.map((s, i) => (
             <tr key={i} className="hover:bg-slate-50">
-              <td className="px-4 py-3 font-semibold text-slate-700">{s.vinculo}</td>
+              <td className="px-4 py-3 font-semibold text-slate-700">
+                {s.vinculo}
+                {s.calidad && (
+                  <div className="text-xs font-normal text-slate-500 mt-0.5">{s.calidad}</div>
+                )}
+              </td>
               <td className="px-4 py-3 text-slate-800">{s.nombre}</td>
               <td className="px-4 py-3 text-blue-700">{s.representante ?? '-'}</td>
               <td className="px-4 py-3 text-blue-700">{s.domicilio ?? '-'}</td>
@@ -282,6 +288,7 @@ function SujetosBlock({
   const [representante, setRepresentante]     = useState('');
   const [domicilio, setDomicilio]             = useState('');
   const [domicilioElectronico, setDomicilioElectronico] = useState('');
+  const [calidad, setCalidad]                 = useState('');
   const [isSending, setIsSending]             = useState(false);
   const [formError, setFormError]             = useState<string | null>(null);
 
@@ -297,12 +304,14 @@ function SujetosBlock({
         representante: representante.trim() || undefined,
         domicilio: domicilio.trim() || undefined,
         domicilioElectronico: domicilioElectronico.trim() || undefined,
+        calidad: vinculo === 'TERCERO' ? (calidad.trim() || undefined) : undefined,
       });
       setVinculo('ACTOR');
       setNombre('');
       setRepresentante('');
       setDomicilio('');
       setDomicilioElectronico('');
+      setCalidad('');
     } catch (err: any) {
       setFormError(err.response?.data?.message ?? 'Error al agregar el sujeto');
     } finally {
@@ -360,6 +369,14 @@ function SujetosBlock({
                 className="form-input text-sm"
               />
             </div>
+            {vinculo === 'TERCERO' && (
+              <input
+                value={calidad}
+                onChange={(e) => setCalidad(e.target.value)}
+                placeholder="Calidad / Rol (ej: Testigo, Perito, Representante)"
+                className="form-input text-sm"
+              />
+            )}
             {formError && <p className="text-xs text-red-600">{formError}</p>}
             <button
               type="submit"

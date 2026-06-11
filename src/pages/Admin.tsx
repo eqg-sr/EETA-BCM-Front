@@ -208,6 +208,8 @@ function AsignacionesTab() {
   const [causaSearch, setCausaSearch]     = useState('');
   const [causaResults, setCausaResults]   = useState<CausaResult[]>([]);
   const [causaLoading, setCausaLoading]   = useState(false);
+  const [allCausas, setAllCausas]         = useState<CausaResult[]>([]);
+  const [allCausasLoading, setAllCausasLoading] = useState(false);
   const [selectedCausa, setSelectedCausa] = useState<CausaResult | null>(null);
   const [asignados, setAsignados]         = useState<Record<string, AssignedUser[]>>({});
   const [asigLoading, setAsigLoading]     = useState<Record<string, boolean>>({});
@@ -237,6 +239,14 @@ function AsignacionesTab() {
     if (causaDebounceRef.current) clearTimeout(causaDebounceRef.current);
     causaDebounceRef.current = setTimeout(() => searchCausas(q), 350);
   };
+
+  useEffect(() => {
+    setAllCausasLoading(true);
+    api.get<{ data: CausaResult[] }>('/causas', { params: { limit: 1000 } })
+      .then(({ data }) => setAllCausas(data.data ?? []))
+      .catch(() => setAllCausas([]))
+      .finally(() => setAllCausasLoading(false));
+  }, []);
 
   const fetchAsignados = useCallback(async (causaId: string, nroExpediente: string) => {
     setAsigLoading((prev) => ({ ...prev, [nroExpediente]: true }));
@@ -314,25 +324,29 @@ function AsignacionesTab() {
             placeholder="Escribí carátula o nro. de expediente electrónico..."
             className="w-full pl-9 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#001f3f]/10 focus:border-[#001f3f] transition-all"
           />
-          {causaLoading && (
+          {(causaLoading || allCausasLoading) && (
             <Loader2 size={16} className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin text-slate-400" />
           )}
         </div>
 
-        {causaResults.length > 0 && (
-          <div className="mt-1 bg-white border border-slate-200 rounded-xl shadow-lg overflow-hidden">
-            {causaResults.map((c) => (
-              <button
-                key={c.id}
-                onClick={() => selectCausa(c)}
-                className="w-full text-left px-4 py-3 hover:bg-slate-50 border-b border-slate-100 last:border-0 transition-colors"
-              >
-                <div className="text-xs font-mono text-[#001f3f] font-semibold">{c.nroExpedienteElectronico || c.identificador}</div>
-                <div className="text-sm text-slate-700">{c.caratula}</div>
-              </button>
-            ))}
-          </div>
-        )}
+        {(() => {
+          const list = causaSearch.trim() ? causaResults : allCausas;
+          if (list.length === 0) return null;
+          return (
+            <div className="mt-1 max-h-72 overflow-y-auto bg-white border border-slate-200 rounded-xl shadow-lg">
+              {list.map((c) => (
+                <button
+                  key={c.id}
+                  onClick={() => selectCausa(c)}
+                  className="w-full text-left px-4 py-3 hover:bg-slate-50 border-b border-slate-100 last:border-0 transition-colors"
+                >
+                  <div className="text-xs font-mono text-[#001f3f] font-semibold">{c.nroExpedienteElectronico || c.identificador}</div>
+                  <div className="text-sm text-slate-700">{c.caratula}</div>
+                </button>
+              ))}
+            </div>
+          );
+        })()}
       </div>
 
       {selectedCausa && (

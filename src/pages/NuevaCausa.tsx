@@ -2,40 +2,35 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Info, Users, Plus, Trash2, Send, Gavel, FileText, Upload } from 'lucide-react';
 import Layout from '../components/Layout';
-import { useCausas, type Causa, type Sujeto } from '../context/CausasContext';
+import { useCausas, type Sujeto } from '../context/CausasContext';
 import { usePermissions } from '../context/AuthContext';
-
-const SALAS = [
-  'TRIBUNAL ARBITRAL BCM – SALA COMERCIAL',
-  'TRIBUNAL ARBITRAL BCM – SALA SOCIETARIA',
-  'TRIBUNAL ARBITRAL BCM – SALA DE COMERCIO EXTERIOR',
-  'TRIBUNAL ARBITRAL BCM – SALA DE CONCURSOS Y QUIEBRAS',
-];
 
 export default function NuevaCausa() {
   const navigate = useNavigate();
-  const { addCausa } = useCausas();
+  const { crearCausa, subirCaratulaArchivo } = useCausas();
   const { canCreateCausa } = usePermissions();
 
-  const [identificador, setIdentificador] = useState('');
-  const [numeroInterno, setNumeroInterno] = useState('');
-  const [caratula, setCaratula] = useState('');
-  const [tribunal, setTribunal] = useState(SALAS[0]);
-  const [arbitro, setArbitro] = useState('');
+  const [caratula, setCaratula]               = useState('');
+  const [nroExpedienteElectronico, setNroExpedienteElectronico] = useState('');
+  const [arbitro1, setArbitro1]               = useState('');
+  const [arbitro2, setArbitro2]               = useState('');
+  const [arbitro3, setArbitro3]               = useState('');
   const [fechaPresentacion, setFechaPresentacion] = useState('');
-  const [fechaInicio, setFechaInicio] = useState('');
-  const [objetoJuicio, setObjetoJuicio] = useState('');
-  const [sujetos, setSujetos] = useState<Sujeto[]>([
-    { vinculo: 'ACTOR', nombre: '', representante: '', domicilio: '', domicilioElectronico: '' },
-    { vinculo: 'DEMANDADO', nombre: '', representante: '', domicilio: '', domicilioElectronico: '' },
+  const [fechaInicio, setFechaInicio]         = useState('');
+  const [objetoJuicio, setObjetoJuicio]       = useState('');
+  const [sujetos, setSujetos]                 = useState<Sujeto[]>([
+    { vinculo: 'ACTOR',    nombre: '', representante: '', domicilio: '', domicilioElectronico: '' },
+    { vinculo: 'DEMANDADO',nombre: '', representante: '', domicilio: '', domicilioElectronico: '' },
   ]);
   const [caratulaArchivo, setCaratulaArchivo] = useState<File | null>(null);
-  const [dragActive, setDragActive] = useState(false);
+  const [dragActive, setDragActive]           = useState(false);
+  const [isSubmitting, setIsSubmitting]       = useState(false);
+  const [submitError, setSubmitError]         = useState<string | null>(null);
 
   if (!canCreateCausa) {
     return (
       <Layout>
-        <p className="text-slate-500">No tiene permisos para crear causas.</p>
+        <p className="text-slate-500">No tiene permisos para crear expedientes.</p>
       </Layout>
     );
   }
@@ -49,32 +44,33 @@ export default function NuevaCausa() {
 
   const removeSujeto = (i: number) => setSujetos((prev) => prev.filter((_, idx) => idx !== i));
 
-  const formatDate = (iso: string) => {
-    if (!iso) return '';
-    const [y, m, d] = iso.split('-');
-    return `${d}/${m}/${y}`;
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const id = `CAU-${Date.now()}`;
-    const causa: Causa = {
-      id,
-      identificador,
-      numeroInterno,
-      caratula,
-      tribunal,
-      arbitro,
-      fechaPresentacion: formatDate(fechaPresentacion),
-      fechaInicio: formatDate(fechaInicio),
-      ultimoMovimiento: formatDate(fechaInicio || fechaPresentacion),
-      objetoJuicio,
-      sujetos: sujetos.filter((s) => s.nombre.trim().length > 0),
-      expedientes: [],
-      causasRelacionadas: [],
-    };
-    addCausa(causa);
-    navigate(`/causas/${id}`);
+    setSubmitError(null);
+    setIsSubmitting(true);
+    try {
+      const causa = await crearCausa({
+        id:                `CAU-${Date.now()}`,
+        caratula,
+        nroExpedienteElectronico: nroExpedienteElectronico || undefined,
+        arbitros: [arbitro1, arbitro2, arbitro3].filter(Boolean),
+        fechaPresentacion,
+        fechaInicio,
+        ultimoMovimiento:  fechaInicio || fechaPresentacion,
+        objetoJuicio,
+        sujetos:           sujetos.filter((s) => s.nombre.trim().length > 0),
+        causasRelacionadas:[],
+	status:'pendiente',
+      });
+      if (caratulaArchivo) {
+        await subirCaratulaArchivo(causa.id, caratulaArchivo);
+      }
+      navigate(`/causas/${causa.id}`);
+    } catch {
+      setSubmitError('Error al crear el expediente. Verificá los datos e intentá nuevamente.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -101,28 +97,10 @@ export default function NuevaCausa() {
           <div className="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm space-y-5">
             <div className="flex items-center gap-2 text-[#001f3f] mb-2">
               <Info size={18} className="text-blue-600" />
-              <h2 className="font-bold uppercase tracking-wider text-xs">Datos de la Causa</h2>
+              <h2 className="font-bold uppercase tracking-wider text-xs">Datos del Expediente</h2>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Field label="Identificador" required>
-                <input
-                  value={identificador}
-                  onChange={(e) => setIdentificador(e.target.value)}
-                  placeholder="Ej: BCM-2026-00045"
-                  className="form-input"
-                  required
-                />
-              </Field>
-              <Field label="Número Interno" required>
-                <input
-                  value={numeroInterno}
-                  onChange={(e) => setNumeroInterno(e.target.value)}
-                  placeholder="Ej: 00245"
-                  className="form-input"
-                  required
-                />
-              </Field>
               <Field label="Fecha de Presentación" required>
                 <input
                   type="date"
@@ -150,6 +128,14 @@ export default function NuevaCausa() {
                   required
                 />
               </Field>
+              <Field label="Nro. Expediente Electrónico">
+                <input
+                  value={nroExpedienteElectronico}
+                  onChange={(e) => setNroExpedienteElectronico(e.target.value)}
+                  placeholder="Ej: EE-2026-12345678-BCM"
+                  className="form-input"
+                />
+              </Field>
             </div>
 
             <Field label="Carátula" required>
@@ -167,26 +153,31 @@ export default function NuevaCausa() {
           <div className="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm space-y-5">
             <div className="flex items-center gap-2 text-[#001f3f] mb-2">
               <Gavel size={18} className="text-blue-600" />
-              <h2 className="font-bold uppercase tracking-wider text-xs">Tribunal y Árbitro</h2>
+              <h2 className="font-bold uppercase tracking-wider text-xs">Árbitros Designados</h2>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Field label="Sala / Tribunal" required>
-                <select
-                  value={tribunal}
-                  onChange={(e) => setTribunal(e.target.value)}
-                  className="form-input"
-                >
-                  {SALAS.map((s) => (
-                    <option key={s} value={s}>{s}</option>
-                  ))}
-                </select>
-              </Field>
-              <Field label="Árbitro designado/a">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <Field label="Árbitro 1">
                 <input
-                  value={arbitro}
-                  onChange={(e) => setArbitro(e.target.value)}
-                  placeholder="Ej: DRA. ANALÍA PÉREZ DE OLIVERA (a designar si vacío)"
+                  value={arbitro1}
+                  onChange={(e) => setArbitro1(e.target.value)}
+                  placeholder="Ej: DRA. ANALÍA PÉREZ DE OLIVERA"
+                  className="form-input"
+                />
+              </Field>
+              <Field label="Árbitro 2">
+                <input
+                  value={arbitro2}
+                  onChange={(e) => setArbitro2(e.target.value)}
+                  placeholder="(opcional)"
+                  className="form-input"
+                />
+              </Field>
+              <Field label="Árbitro 3">
+                <input
+                  value={arbitro3}
+                  onChange={(e) => setArbitro3(e.target.value)}
+                  placeholder="(opcional)"
                   className="form-input"
                 />
               </Field>
@@ -315,6 +306,12 @@ export default function NuevaCausa() {
             </div>
           </div>
 
+          {submitError && (
+            <div className="px-4 py-3 bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl">
+              {submitError}
+            </div>
+          )}
+
           <div className="flex items-center justify-end gap-4">
             <button
               type="button"
@@ -325,10 +322,11 @@ export default function NuevaCausa() {
             </button>
             <button
               type="submit"
-              className="flex items-center gap-2 px-10 py-3 bg-[#001f3f] text-white rounded-xl hover:bg-[#002d5a] transition-all shadow-lg shadow-blue-900/20 text-sm font-bold active:scale-95"
+              disabled={isSubmitting}
+              className="flex items-center gap-2 px-10 py-3 bg-[#001f3f] text-white rounded-xl hover:bg-[#002d5a] transition-all shadow-lg shadow-blue-900/20 text-sm font-bold active:scale-95 disabled:opacity-70"
             >
               <Send size={18} />
-              Crear Expediente
+              {isSubmitting ? 'Creando...' : 'Crear Expediente'}
             </button>
           </div>
 

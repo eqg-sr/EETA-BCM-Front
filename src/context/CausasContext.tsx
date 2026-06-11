@@ -1,4 +1,7 @@
 import { createContext, useContext, useState } from 'react';
+import api from '../services/api';
+
+// ── Types ─────────────────────────────────────────────────────────────────────
 
 export type SujetoVinculo = 'ACTOR' | 'DEMANDADO' | 'TERCERO';
 
@@ -8,21 +11,32 @@ export type Sujeto = {
   representante?: string;
   domicilio?: string;
   domicilioElectronico?: string;
+  aprobado?: boolean;
+  aprobacionToken?: string;
+  calidad?: string;
 };
 
-export type MovimientoTipo = 'ACT' | 'ESC' | 'CED' | 'MOV' | 'COMENTARIO';
+export type MovimientoTipo = 'ACT' | 'ESC' | 'CED' | 'RES' | 'NOT' | 'AUD' | 'PER' | 'SEN';
 
 export type Movimiento = {
   id: string;
   fecha: string;
   tipo: MovimientoTipo;
   titulo: string;
+  descripcion?: string;
   numero?: string;
   tribunal?: string;
   presentante?: string;
   acceso?: string;
   adjuntos?: boolean;
   relaciones?: boolean;
+  archivo?: string;
+  nombreArchivo?: string;
+  sujetoNombre?: string;
+};
+
+export type NuevoMovimiento = Omit<Movimiento, 'archivo' | 'nombreArchivo'> & {
+  archivo?: File;
 };
 
 export type Comentario = {
@@ -45,13 +59,32 @@ export type Expediente = {
   movimientos: Movimiento[];
   comentarios: Comentario[];
   adjuntoNombre?: string;
+  asignados?: string[];
+};
+
+export type NuevoExpediente = {
+  nroExpediente: string;
+  caratula: string;
+  fechaPresentacion: string;
+  fechaInicio: string;
+  ultimoMovimiento: string;
+  objetoJuicio: string;
+  montoDisputa?: string;
+  asignados?: string[];
 };
 
 export type CausaRelacionada = {
+  _id?: string;
   identificador: string;
-  caratula: string;
-  tribunal: string;
+  descripcion: string;
+  caratula?: string;
+  tribunal?: string;
+  archivo?: string;
+  nombreArchivo?: string;
+  creadoEn?: string;
 };
+
+export type CausaStatus = 'pendiente' | 'iniciado' | 'en_proceso' | 'cerrado';
 
 export type Causa = {
   id: string;
@@ -59,223 +92,243 @@ export type Causa = {
   numeroInterno: string;
   caratula: string;
   tribunal: string;
-  arbitro: string;
+  nroExpedienteElectronico?: string;
+  arbitros?: string[];
   fechaPresentacion: string;
   fechaInicio: string;
   ultimoMovimiento: string;
   objetoJuicio: string;
+  status: CausaStatus;
+  archivo?: string;
+  nombreArchivo?: string;
   sujetos: Sujeto[];
   expedientes: Expediente[];
   causasRelacionadas: CausaRelacionada[];
 };
 
-type CausasContextType = {
-  causas: Causa[];
-  getCausa: (id: string) => Causa | undefined;
-  addCausa: (c: Causa) => void;
-  addExpediente: (causaId: string, exp: Expediente) => void;
-  addComentario: (causaId: string, nroExp: string, comentario: Comentario) => void;
-  addMovimiento: (causaId: string, nroExp: string, mov: Movimiento) => void;
+export type PaginatedCausas = {
+  data: Causa[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
 };
+
+export type FetchCausasParams = {
+  page?: number;
+  limit?: number;
+  search?: string;
+  tribunal?: string;
+  arbitro?: string;
+  status?: CausaStatus;
+};
+
+type CreateCausaPayload = Omit<Causa, 'identificador' | 'numeroInterno' | 'expedientes' | 'causasRelacionadas' | 'sujetos' | 'tribunal'> & {
+  sujetos?: Sujeto[];
+  expedientes?: Expediente[];
+  causasRelacionadas?: CausaRelacionada[];
+  tribunal?: string;
+};
+
+type CausasContextType = {
+  causas: PaginatedCausas;
+  currentCausa: Causa | null;
+  isLoading: boolean;
+  error: string | null;
+  fetchCausas: (params?: FetchCausasParams) => Promise<void>;
+  fetchCausa: (id: string) => Promise<void>;
+  crearCausa: (data: CreateCausaPayload) => Promise<Causa>;
+  subirCaratulaArchivo: (causaId: string, archivo: File) => Promise<void>;
+  actualizarCausa: (id: string, data: Partial<Causa>) => Promise<void>;
+  eliminarCausa: (id: string) => Promise<void>;
+  cambiarStatus: (causaId: string, status: CausaStatus) => Promise<void>;
+  agregarMovimiento: (causaId: string, expNro: string, data: NuevoMovimiento) => Promise<void>;
+  agregarSujeto: (causaId: string, expNro: string, data: Sujeto) => Promise<void>;
+  agregarSujetoCausa: (causaId: string, data: Sujeto) => Promise<void>;
+  agregarRelacionada: (causaId: string, identificador: string, descripcion: string, archivo?: File) => Promise<void>;
+  eliminarRelacionada: (causaId: string, identificador: string) => Promise<void>;
+  agregarExpediente: (causaId: string, data: NuevoExpediente) => Promise<void>;
+  eliminarExpediente: (causaId: string, nroExpediente: string) => Promise<void>;
+};
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+const EMPTY_PAGE: PaginatedCausas = { data: [], total: 0, page: 1, limit: 20, totalPages: 0 };
+
+function fmtDate(raw: string | Date | undefined): string {
+  if (!raw) return '';
+  const value = String(raw);
+
+  // Fechas que representan solo un día (sin hora significativa) llegan como
+  // "YYYY-MM-DD" o "YYYY-MM-DDT00:00:00.000Z". Parsearlas directamente con
+  // `new Date(...)` las interpreta como medianoche UTC, que en timezones
+  // negativos (ej. Argentina, UTC-3) cae en el día anterior. Para evitarlo,
+  // se parsean al mediodía local.
+  const dateOnlyMatch = value.match(/^(\d{4}-\d{2}-\d{2})(?:T00:00:00(?:\.000)?Z?)?$/);
+  if (dateOnlyMatch) {
+    const d = new Date(`${dateOnlyMatch[1]}T12:00:00`);
+    if (isNaN(d.getTime())) return String(raw);
+    return d.toLocaleDateString('es-AR', {
+      day: '2-digit', month: '2-digit', year: 'numeric',
+    });
+  }
+
+  const d = new Date(value);
+  if (isNaN(d.getTime())) return String(raw);
+  return d.toLocaleDateString('es-AR', {
+    day: '2-digit', month: '2-digit', year: 'numeric',
+    hour: '2-digit', minute: '2-digit',
+  });
+}
+
+function mapMovimiento(m: any): Movimiento {
+  return { ...m, fecha: fmtDate(m.fecha) };
+}
+
+function mapExpediente(e: any): Expediente {
+  return {
+    ...e,
+    fechaPresentacion: fmtDate(e.fechaPresentacion),
+    fechaInicio:       fmtDate(e.fechaInicio),
+    ultimoMovimiento:  fmtDate(e.ultimoMovimiento),
+    movimientos:  (e.movimientos  ?? []).map(mapMovimiento),
+    comentarios:  (e.comentarios  ?? []).map((c: any) => ({ ...c, fecha: fmtDate(c.fecha) })),
+  };
+}
+
+function mapCausa(raw: any): Causa {
+  return {
+    ...raw,
+    fechaPresentacion: fmtDate(raw.fechaPresentacion),
+    fechaInicio:       fmtDate(raw.fechaInicio),
+    ultimoMovimiento:  fmtDate(raw.ultimoMovimiento),
+    expedientes: (raw.expedientes ?? []).map(mapExpediente),
+  };
+}
+
+// ── Context ───────────────────────────────────────────────────────────────────
 
 const CausasContext = createContext<CausasContextType | null>(null);
 
-const TRIBUNAL = 'TRIBUNAL ARBITRAL BCM';
-
-// === Causa 1: Compraventa de uva — incumplimiento ===
-const sujetos1: Sujeto[] = [
-  { vinculo: 'ACTOR', nombre: 'VIÑEDOS DEL VALLE S.A.', representante: 'DR. MARTÍN RODRÍGUEZ ESCALANTE', domicilio: 'Av. San Martín 1245, Mendoza', domicilioElectronico: 'mrodriguez@estudio-rye.com.ar' },
-  { vinculo: 'DEMANDADO', nombre: 'AGROEXPORT CUYO S.R.L.', representante: 'DRA. LUCÍA FERREYRA', domicilio: 'Belgrano 2380, Godoy Cruz', domicilioElectronico: 'lferreyra@ferreyra-asoc.com.ar' },
-];
-
-const movs1: Movimiento[] = [
-  { id: 'c1-m1', fecha: '24/04/2026 10:42:18', tipo: 'ACT', titulo: 'AUDIENCIA PRELIMINAR – ACTA', numero: 'AC-2026-00482', tribunal: TRIBUNAL, presentante: 'Secretaría', acceso: 'Acta pública', relaciones: true },
-  { id: 'c1-m2', fecha: '22/04/2026 16:08:55', tipo: 'ESC', titulo: 'Contesta demanda y opone excepciones', numero: 'ES-2026-01093', tribunal: TRIBUNAL, presentante: 'Dra. Ferreyra', acceso: 'Escrito de parte', adjuntos: true, relaciones: true },
-  { id: 'c1-m3', fecha: '15/04/2026 09:21:03', tipo: 'CED', titulo: 'Cédula de notificación traslado de demanda', numero: 'CD-2026-00318', tribunal: TRIBUNAL, presentante: 'Notificaciones', acceso: 'Cédula electrónica', adjuntos: true },
-  { id: 'c1-m4', fecha: '12/04/2026 14:55:40', tipo: 'ACT', titulo: 'DESIGNACIÓN DE ÁRBITRO ÚNICO', numero: 'AC-2026-00461', tribunal: TRIBUNAL, presentante: 'Cámara Arbitral', acceso: 'Resolución', relaciones: true },
-  { id: 'c1-m5', fecha: '08/04/2026 11:14:22', tipo: 'ESC', titulo: 'Promueve demanda arbitral – acompaña prueba documental', numero: 'ES-2026-01005', tribunal: TRIBUNAL, presentante: 'Dr. Rodríguez Escalante', acceso: 'Escrito de parte', adjuntos: true },
-];
-
-const expediente1: Expediente = {
-  nroExpediente: 'EXP-BCM-2026-014',
-  caratula: 'VIÑEDOS DEL VALLE S.A. C/ AGROEXPORT CUYO S.R.L. P/ INCUMPLIMIENTO DE CONTRATO DE COMPRAVENTA',
-  fechaPresentacion: '08/04/2026',
-  fechaInicio: '08/04/2026',
-  ultimoMovimiento: '24/04/2026',
-  objetoJuicio: 'Incumplimiento contractual',
-  montoDisputa: '$ 28.450.000',
-  sujetos: sujetos1,
-  movimientos: movs1,
-  comentarios: [],
-};
-
-const causa1: Causa = {
-  id: 'CAU-2026-014',
-  identificador: 'BCM-2026-00014',
-  numeroInterno: '00214',
-  caratula: 'VIÑEDOS DEL VALLE S.A. C/ AGROEXPORT CUYO S.R.L. P/ INCUMPLIMIENTO DE CONTRATO DE COMPRAVENTA',
-  tribunal: 'TRIBUNAL ARBITRAL BCM – SALA COMERCIAL',
-  arbitro: 'DRA. ANALÍA PÉREZ DE OLIVERA',
-  fechaPresentacion: '08/04/2026',
-  fechaInicio: '08/04/2026',
-  ultimoMovimiento: '24/04/2026',
-  objetoJuicio: 'Incumplimiento contractual',
-  sujetos: sujetos1,
-  expedientes: [expediente1],
-  causasRelacionadas: [
-    { identificador: 'BCM-2026-00009', caratula: 'VIÑEDOS DEL VALLE S.A. C/ AGROEXPORT CUYO S.R.L. P/ MEDIDA CAUTELAR PREVIA', tribunal: 'TRIBUNAL ARBITRAL BCM – SALA COMERCIAL' },
-  ],
-};
-
-// === Causa 2: Disputa societaria ===
-const sujetos2: Sujeto[] = [
-  { vinculo: 'ACTOR', nombre: 'INVERSIONES ANDINAS S.A.', representante: 'DR. JAVIER MOYANO', domicilio: '9 de Julio 985, Ciudad de Mendoza', domicilioElectronico: 'jmoyano@moyano-legal.com.ar' },
-  { vinculo: 'DEMANDADO', nombre: 'BODEGAS LOS CERROS S.A.', representante: 'DRA. CECILIA AGUIRRE', domicilio: 'Ruta 60 Km 12, Luján de Cuyo', domicilioElectronico: 'caguirre@aguirre-abogados.com.ar' },
-  { vinculo: 'TERCERO', nombre: 'ESTUDIO CONTABLE LATORRE & ASOC.', representante: 'CR. RAÚL LATORRE', domicilio: 'Patricias Mendocinas 460, Mendoza', domicilioElectronico: 'rlatorre@latorre-contadores.com.ar' },
-];
-
-const movs2: Movimiento[] = [
-  { id: 'c2-m1', fecha: '02/05/2026 17:30:12', tipo: 'ACT', titulo: 'PROVIDENCIA – APERTURA A PRUEBA', numero: 'AC-2026-00521', tribunal: TRIBUNAL, presentante: 'Secretaría', acceso: 'Resolución', relaciones: true },
-  { id: 'c2-m2', fecha: '28/04/2026 13:05:44', tipo: 'ESC', titulo: 'Ofrece prueba pericial contable', numero: 'ES-2026-01184', tribunal: TRIBUNAL, presentante: 'Dr. Moyano', acceso: 'Escrito de parte', adjuntos: true },
-  { id: 'c2-m3', fecha: '20/04/2026 10:18:09', tipo: 'ESC', titulo: 'Contesta demanda – reconvención por daños', numero: 'ES-2026-01122', tribunal: TRIBUNAL, presentante: 'Dra. Aguirre', acceso: 'Escrito de parte', adjuntos: true, relaciones: true },
-  { id: 'c2-m4', fecha: '11/04/2026 09:48:33', tipo: 'CED', titulo: 'Cédula de notificación – traslado de demanda', numero: 'CD-2026-00372', tribunal: TRIBUNAL, presentante: 'Notificaciones', acceso: 'Cédula electrónica' },
-];
-
-const expediente2: Expediente = {
-  nroExpediente: 'EXP-BCM-2026-021',
-  caratula: 'INVERSIONES ANDINAS S.A. C/ BODEGAS LOS CERROS S.A. P/ CONFLICTO SOCIETARIO',
-  fechaPresentacion: '04/04/2026',
-  fechaInicio: '04/04/2026',
-  ultimoMovimiento: '02/05/2026',
-  objetoJuicio: 'Conflicto societario',
-  montoDisputa: '$ 64.200.000',
-  sujetos: sujetos2,
-  movimientos: movs2,
-  comentarios: [],
-};
-
-const causa2: Causa = {
-  id: 'CAU-2026-021',
-  identificador: 'BCM-2026-00021',
-  numeroInterno: '00221',
-  caratula: 'INVERSIONES ANDINAS S.A. C/ BODEGAS LOS CERROS S.A. P/ CONFLICTO SOCIETARIO',
-  tribunal: 'TRIBUNAL ARBITRAL BCM – SALA SOCIETARIA',
-  arbitro: 'DR. FERNANDO ARIAS LAGOS',
-  fechaPresentacion: '04/04/2026',
-  fechaInicio: '04/04/2026',
-  ultimoMovimiento: '02/05/2026',
-  objetoJuicio: 'Conflicto societario',
-  sujetos: sujetos2,
-  expedientes: [expediente2],
-  causasRelacionadas: [],
-};
-
-// === Causa 3: Resolución contractual y daños ===
-const sujetos3: Sujeto[] = [
-  { vinculo: 'ACTOR', nombre: 'CONSTRUCTORA CUYANA S.A.', representante: 'DR. NICOLÁS BUSTOS', domicilio: 'Pedro Molina 750, Mendoza', domicilioElectronico: 'nbustos@bustos-legal.com.ar' },
-  { vinculo: 'DEMANDADO', nombre: 'DESARROLLOS URBANOS DEL OESTE S.A.', representante: 'DRA. PATRICIA QUIROGA', domicilio: 'Av. Boulogne Sur Mer 1380, Las Heras', domicilioElectronico: 'pquiroga@quiroga-abogados.com.ar' },
-];
-
-const movs3: Movimiento[] = [
-  { id: 'c3-m1', fecha: '05/05/2026 18:12:01', tipo: 'ACT', titulo: 'AUDIENCIA DE CONCILIACIÓN – SIN ACUERDO', numero: 'AC-2026-00540', tribunal: TRIBUNAL, presentante: 'Secretaría', acceso: 'Acta pública' },
-  { id: 'c3-m2', fecha: '30/04/2026 11:42:55', tipo: 'ESC', titulo: 'Acompaña dictamen pericial técnico', numero: 'ES-2026-01210', tribunal: TRIBUNAL, presentante: 'Ing. Hugo Domínguez (perito)', acceso: 'Escrito de parte', adjuntos: true, relaciones: true },
-  { id: 'c3-m3', fecha: '18/04/2026 15:20:48', tipo: 'ESC', titulo: 'Contesta demanda', numero: 'ES-2026-01098', tribunal: TRIBUNAL, presentante: 'Dra. Quiroga', acceso: 'Escrito de parte', adjuntos: true },
-];
-
-const expediente3: Expediente = {
-  nroExpediente: 'EXP-BCM-2026-027',
-  caratula: 'CONSTRUCTORA CUYANA S.A. C/ DESARROLLOS URBANOS DEL OESTE S.A. P/ RESOLUCIÓN DE CONTRATO Y DAÑOS',
-  fechaPresentacion: '02/04/2026',
-  fechaInicio: '02/04/2026',
-  ultimoMovimiento: '05/05/2026',
-  objetoJuicio: 'Resolución contractual',
-  montoDisputa: '$ 112.800.000',
-  sujetos: sujetos3,
-  movimientos: movs3,
-  comentarios: [],
-};
-
-const causa3: Causa = {
-  id: 'CAU-2026-027',
-  identificador: 'BCM-2026-00027',
-  numeroInterno: '00227',
-  caratula: 'CONSTRUCTORA CUYANA S.A. C/ DESARROLLOS URBANOS DEL OESTE S.A. P/ RESOLUCIÓN DE CONTRATO Y DAÑOS',
-  tribunal: 'TRIBUNAL ARBITRAL BCM – SALA COMERCIAL',
-  arbitro: 'DRA. ANALÍA PÉREZ DE OLIVERA',
-  fechaPresentacion: '02/04/2026',
-  fechaInicio: '02/04/2026',
-  ultimoMovimiento: '05/05/2026',
-  objetoJuicio: 'Resolución contractual',
-  sujetos: sujetos3,
-  expedientes: [expediente3],
-  causasRelacionadas: [
-    { identificador: 'BCM-2026-00018', caratula: 'CONSTRUCTORA CUYANA S.A. C/ DESARROLLOS URBANOS DEL OESTE S.A. P/ MEDIDA CAUTELAR – EMBARGO PREVENTIVO', tribunal: 'TRIBUNAL ARBITRAL BCM – SALA COMERCIAL' },
-  ],
-};
-
 export function CausasProvider({ children }: { children: React.ReactNode }) {
-  const [causas, setCausas] = useState<Causa[]>([causa1, causa2, causa3]);
+  const [causas, setCausas]           = useState<PaginatedCausas>(EMPTY_PAGE);
+  const [currentCausa, setCurrentCausa] = useState<Causa | null>(null);
+  const [isLoading, setIsLoading]     = useState(false);
+  const [error, setError]             = useState<string | null>(null);
 
-  const getCausa = (id: string) => causas.find((c) => c.id === id);
+  const fetchCausas = async (params: FetchCausasParams = {}) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const { data } = await api.get('/causas', { params });
+      setCausas({
+        ...data,
+        data: (data.data ?? []).map(mapCausa),
+      });
+    } catch (e: any) {
+      setError(e.response?.data?.message ?? 'Error al cargar expedientes');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-  const addCausa = (c: Causa) => setCausas((prev) => [...prev, c]);
+  const fetchCausa = async (id: string) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const { data } = await api.get(`/causas/${id}`);
+      setCurrentCausa(mapCausa(data));
+    } catch (e: any) {
+      setError(e.response?.data?.message ?? 'Error al cargar el expediente');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-  const addExpediente = (causaId: string, exp: Expediente) =>
-    setCausas((prev) =>
-      prev.map((c) =>
-        c.id === causaId
-          ? { ...c, expedientes: [...c.expedientes, exp], ultimoMovimiento: exp.ultimoMovimiento }
-          : c
-      )
-    );
+  const crearCausa = async (payload: CreateCausaPayload): Promise<Causa> => {
+    const { data } = await api.post('/causas', payload);
+    const causa = mapCausa(data);
+    return causa;
+  };
 
-  const addComentario = (causaId: string, nroExp: string, comentario: Comentario) =>
-    setCausas((prev) =>
-      prev.map((c) => {
-        if (c.id !== causaId) return c;
-        return {
-          ...c,
-          ultimoMovimiento: comentario.fecha,
-          expedientes: c.expedientes.map((e) => {
-            if (e.nroExpediente !== nroExp) return e;
-            const movimientoComentario: Movimiento = {
-              id: comentario.id,
-              fecha: comentario.fecha,
-              tipo: 'COMENTARIO',
-              titulo: `Comentario de ${comentario.autor} (${comentario.rol})`,
-              tribunal: 'TRIBUNAL ARBITRAL BCM',
-              presentante: comentario.autor,
-              acceso: 'Movimiento interno',
-            };
-            return {
-              ...e,
-              comentarios: [...e.comentarios, comentario],
-              movimientos: [movimientoComentario, ...e.movimientos],
-              ultimoMovimiento: comentario.fecha,
-            };
-          }),
-        };
-      })
-    );
+  const subirCaratulaArchivo = async (causaId: string, archivo: File) => {
+    const form = new FormData();
+    form.append('archivo', archivo);
+    await api.post(`/causas/${causaId}/caratula`, form);
+  };
 
-  const addMovimiento = (causaId: string, nroExp: string, mov: Movimiento) =>
-    setCausas((prev) =>
-      prev.map((c) => {
-        if (c.id !== causaId) return c;
-        return {
-          ...c,
-          ultimoMovimiento: mov.fecha,
-          expedientes: c.expedientes.map((e) =>
-            e.nroExpediente === nroExp
-              ? { ...e, movimientos: [mov, ...e.movimientos], ultimoMovimiento: mov.fecha }
-              : e
-          ),
-        };
-      })
-    );
+  const actualizarCausa = async (id: string, payload: Partial<Causa>) => {
+    await api.put(`/causas/${id}`, payload);
+    await fetchCausa(id);
+  };
+
+  const eliminarCausa = async (id: string) => {
+    await api.delete(`/causas/${id}`);
+    setCausas((prev) => ({
+      ...prev,
+      data: prev.data.filter((c) => c.id !== id),
+      total: prev.total - 1,
+    }));
+  };
+
+  const cambiarStatus = async (causaId: string, status: CausaStatus) => {
+    await api.put(`/causas/${causaId}/status`, { status });
+    await fetchCausa(causaId);
+  };
+
+  const agregarMovimiento = async (causaId: string, expNro: string, data: NuevoMovimiento) => {
+    const { archivo, ...rest } = data;
+    const form = new FormData();
+    Object.entries(rest).forEach(([key, value]) => {
+      if (value === undefined || value === null || value === '') return;
+      form.append(key, String(value));
+    });
+    if (archivo) form.append('archivo', archivo);
+    await api.post(`/causas/${causaId}/expedientes/${expNro}/movimientos`, form);
+    await fetchCausa(causaId);
+  };
+
+  const agregarSujeto = async (causaId: string, expNro: string, data: Sujeto) => {
+    await api.post(`/causas/${causaId}/expedientes/${expNro}/sujetos`, data);
+    await fetchCausa(causaId);
+  };
+
+  const agregarSujetoCausa = async (causaId: string, data: Sujeto) => {
+    await api.post(`/causas/${causaId}/sujetos`, data);
+    await fetchCausa(causaId);
+  };
+
+  const agregarRelacionada = async (causaId: string, identificador: string, descripcion: string, archivo?: File) => {
+    const form = new FormData();
+    form.append('identificador', identificador);
+    form.append('descripcion', descripcion);
+    if (archivo) form.append('archivo', archivo);
+    await api.post(`/causas/${causaId}/relacionadas`, form);
+    await fetchCausa(causaId);
+  };
+
+  const eliminarRelacionada = async (causaId: string, identificador: string) => {
+    await api.delete(`/causas/${causaId}/relacionadas/${encodeURIComponent(identificador)}`);
+    await fetchCausa(causaId);
+  };
+
+  const agregarExpediente = async (causaId: string, data: NuevoExpediente) => {
+    await api.post(`/causas/${causaId}/expedientes`, data);
+    await fetchCausa(causaId);
+  };
+
+  const eliminarExpediente = async (causaId: string, nroExpediente: string) => {
+    await api.delete(`/causas/${causaId}/expedientes/${encodeURIComponent(nroExpediente)}`);
+    await fetchCausa(causaId);
+  };
 
   return (
-    <CausasContext.Provider value={{ causas, getCausa, addCausa, addExpediente, addComentario, addMovimiento }}>
+    <CausasContext.Provider value={{
+      causas, currentCausa, isLoading, error,
+      fetchCausas, fetchCausa, crearCausa, subirCaratulaArchivo, actualizarCausa, eliminarCausa, cambiarStatus,
+      agregarMovimiento, agregarSujeto, agregarSujetoCausa, agregarRelacionada, eliminarRelacionada,
+      agregarExpediente, eliminarExpediente,
+    }}>
       {children}
     </CausasContext.Provider>
   );

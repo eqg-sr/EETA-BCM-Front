@@ -77,7 +77,7 @@ export default function HelpCenter() {
           </button>
           
           <button 
-            onClick={() => navigate('/expedients')}
+            onClick={() => navigate('/causas')}
             className="flex items-center justify-center gap-2 py-2.5 px-3 bg-white text-slate-600 text-[11px] font-bold rounded-lg border border-slate-200 hover:bg-slate-50 transition-all"
           >
             <ArrowLeft size={14} />

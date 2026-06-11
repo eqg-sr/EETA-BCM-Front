@@ -1,59 +1,36 @@
 import { useState } from 'react';
-import { useAuth, ROLE_LABELS, type Role } from '../context/AuthContext';
+import { useAuth } from '../context/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
-import { Eye, EyeOff, AlertCircle, KeyRound } from 'lucide-react';
+import { Eye, EyeOff, AlertCircle } from 'lucide-react';
 import logo from '../assets/LogoNegro.png';
-
-type DemoUser = {
-  email: string;
-  password: string;
-  name: string;
-  role: Role;
-};
-
-const DEMO_USERS: DemoUser[] = [
-  { email: 'arbitro@bcm.com.ar',     password: 'arbitro1234',     name: 'Dra. Analía Pérez de Olivera',     role: 'arbitro' },
-  { email: 'secretario@bcm.com.ar',  password: 'secretario1234',  name: 'Dra. Mariana Sosa',                role: 'secretario' },
-  { email: 'actor@bcm.com.ar',       password: 'actor1234',       name: 'Dr. Martín Rodríguez Escalante',   role: 'actor' },
-  { email: 'demandado@bcm.com.ar',   password: 'demandado1234',   name: 'Agroexport Cuyo S.R.L.',           role: 'demandado' },
-];
+import axios from 'axios';
 
 export default function Login() {
   const { login } = useAuth();
   const nav = useNavigate();
 
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail]           = useState('');
+  const [password, setPassword]     = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [showHint, setShowHint] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError]           = useState<string | null>(null);
+  const [isLoading, setIsLoading]   = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setIsLoading(true);
-
-    setTimeout(() => {
-      const match = DEMO_USERS.find(
-        (u) => u.email.toLowerCase() === email.trim().toLowerCase() && u.password === password
-      );
-      setIsLoading(false);
-
-      if (!match) {
+    try {
+      await login(email.trim(), password);
+      nav('/dashboard');
+    } catch (err) {
+      if (axios.isAxiosError(err) && err.response?.status === 403) {
+        setError(err.response.data?.message ?? 'Acceso denegado.');
+      } else {
         setError('Credenciales inválidas. Verificá el email y la contraseña.');
-        return;
       }
-
-      login({ email: match.email, name: match.name, role: match.role });
-      nav('/causas');
-    }, 500);
-  };
-
-  const fillCredentials = (u: DemoUser) => {
-    setEmail(u.email);
-    setPassword(u.password);
-    setError(null);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -122,42 +99,9 @@ export default function Login() {
             disabled={isLoading}
             className="w-full bg-[#001f3f] text-white font-semibold py-3 rounded-xl hover:bg-[#002d5a] transition-all active:scale-[0.98] disabled:opacity-70 flex justify-center items-center shadow-lg shadow-blue-900/20"
           >
-            {isLoading ? "Iniciando sesión..." : "Iniciar Sesión"}
+            {isLoading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
           </button>
         </form>
-
-        <div className="mt-6 border-t border-slate-100 pt-4">
-          <button
-            type="button"
-            onClick={() => setShowHint((v) => !v)}
-            className="flex items-center gap-2 text-xs font-semibold text-slate-500 hover:text-[#001f3f] transition-colors"
-          >
-            <KeyRound size={14} />
-            {showHint ? 'Ocultar credenciales de prueba' : 'Ver credenciales de prueba'}
-          </button>
-
-          {showHint && (
-            <div className="mt-3 space-y-2">
-              {DEMO_USERS.map((u) => (
-                <button
-                  key={u.email}
-                  type="button"
-                  onClick={() => fillCredentials(u)}
-                  className="w-full text-left bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg px-3 py-2 transition-colors"
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-blue-700">
-                      {ROLE_LABELS[u.role]}
-                    </span>
-                    <span className="text-[10px] text-slate-400 font-medium">click para usar</span>
-                  </div>
-                  <div className="text-xs font-mono text-slate-700 mt-0.5">{u.email}</div>
-                  <div className="text-xs font-mono text-slate-400">{u.password}</div>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
 
         <p className="text-center mt-8 text-sm text-slate-600">
           ¿No tienes una cuenta?{' '}

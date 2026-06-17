@@ -2,13 +2,11 @@ import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { FolderOpen, Plus, Search, ExternalLink, ChevronLeft, ChevronRight, Download } from 'lucide-react';
 import Layout from '../components/Layout';
-import StatusBadge from '../components/StatusBadge';
 import { useCausas, type Causa, type CausaStatus } from '../context/CausasContext';
 import { usePermissions } from '../context/AuthContext';
 import api from '../services/api';
 
 const STATUS_OPTIONS: { value: CausaStatus; label: string }[] = [
-  { value: 'pendiente',  label: 'Pendiente' },
   { value: 'iniciado',   label: 'Iniciado' },
   { value: 'en_proceso', label: 'En proceso' },
   { value: 'cerrado',    label: 'Cerrado' },
@@ -128,10 +126,9 @@ export default function Causas() {
               <thead className="bg-slate-50 text-left">
                 <tr className="text-slate-600 text-xs uppercase tracking-wider">
                   <th className="px-4 py-3 font-semibold">Nro. Expediente Electrónico</th>
-                  <th className="px-4 py-3 font-semibold">Carátula</th>
+                  <th className="px-4 py-3 font-semibold">Demanda</th>
                   <th className="px-4 py-3 font-semibold">Tribunal</th>
                   <th className="px-4 py-3 font-semibold">Árbitros</th>
-                  <th className="px-4 py-3 font-semibold">Estado</th>
                   <th className="px-4 py-3 font-semibold">Últ. movimiento</th>
                   <th className="px-4 py-3 font-semibold">Adjunto</th>
                   <th className="px-4 py-3"></th>
@@ -157,7 +154,6 @@ export default function Causas() {
                         </>
                       ) : '-'}
                     </td>
-                    <td className="px-4 py-3"><StatusBadge status={c.status} /></td>
                     <td className="px-4 py-3 text-slate-500 text-xs">{c.ultimoMovimiento}</td>
                     <td className="px-4 py-3">
                       {c.nombreArchivo ? (

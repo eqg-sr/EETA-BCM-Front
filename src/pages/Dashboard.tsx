@@ -253,7 +253,7 @@ export default function Dashboard() {
               <thead className="bg-slate-50 text-left">
                 <tr className="text-slate-600 text-xs uppercase tracking-wider">
                   <th className="px-4 py-3 font-semibold">Nro. Expediente Electrónico</th>
-                  <th className="px-4 py-3 font-semibold">Carátula</th>
+                  <th className="px-4 py-3 font-semibold">Demanda</th>
                   <th className="px-4 py-3 font-semibold">Estado</th>
                   <th className="px-4 py-3 font-semibold">Últ. movimiento</th>
                   <th className="px-4 py-3"></th>

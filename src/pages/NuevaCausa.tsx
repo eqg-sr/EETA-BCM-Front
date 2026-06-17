@@ -4,6 +4,14 @@ import { ArrowLeft, Info, Users, Plus, Trash2, Send, Gavel, FileText, Upload } f
 import Layout from '../components/Layout';
 import { useCausas, type Sujeto } from '../context/CausasContext';
 import { usePermissions } from '../context/AuthContext';
+import api from '../services/api';
+
+const ARBITROS_TITULARES = [
+  { nombre: 'Pedro Alvaro Pérez Catón',  matricula: '(pendiente)' }, // TODO: completar matrícula
+  { nombre: 'Pablo Javier Olaiz',        matricula: '(pendiente)' }, // TODO: completar matrícula
+  { nombre: 'Federico Pithod',           matricula: '(pendiente)' }, // TODO: completar matrícula
+];
+const SECRETARIO_TRIBUNAL = { nombre: 'Santiago María Cardozo', matricula: '(pendiente)' }; // TODO: completar matrícula
 
 export default function NuevaCausa() {
   const navigate = useNavigate();
@@ -12,9 +20,9 @@ export default function NuevaCausa() {
 
   const [caratula, setCaratula]               = useState('');
   const [nroExpedienteElectronico, setNroExpedienteElectronico] = useState('');
-  const [arbitro1, setArbitro1]               = useState('');
-  const [arbitro2, setArbitro2]               = useState('');
-  const [arbitro3, setArbitro3]               = useState('');
+  const [suplente1, setSuplente1]             = useState('');
+  const [suplente2, setSuplente2]             = useState('');
+  const [suplente3, setSuplente3]             = useState('');
   const [fechaPresentacion, setFechaPresentacion] = useState('');
   const [fechaInicio, setFechaInicio]         = useState('');
   const [objetoJuicio, setObjetoJuicio]       = useState('');
@@ -26,6 +34,8 @@ export default function NuevaCausa() {
   const [dragActive, setDragActive]           = useState(false);
   const [isSubmitting, setIsSubmitting]       = useState(false);
   const [submitError, setSubmitError]         = useState<string | null>(null);
+  const [parseando, setParseando]             = useState(false);
+  const [_parsedData, setParsedData]          = useState<Record<string, string>>({});
 
   if (!canCreateCausa) {
     return (
@@ -44,6 +54,35 @@ export default function NuevaCausa() {
 
   const removeSujeto = (i: number) => setSujetos((prev) => prev.filter((_, idx) => idx !== i));
 
+  const handleArchivoSeleccionado = async (file: File | null) => {
+    setCaratulaArchivo(file);
+    if (!file || file.type !== 'application/pdf') return;
+
+    setParseando(true);
+    try {
+      const form = new FormData();
+      form.append('archivo', file);
+      const { data } = await api.post<Record<string, string>>('/causas/parse-demanda', form);
+      setParsedData(data);
+
+      if (data.caratula && !caratula) setCaratula(data.caratula);
+
+      if (data.fecha) {
+        // convert DD/MM/YYYY or DD-MM-YYYY → YYYY-MM-DD for <input type="date">
+        const parts = data.fecha.split(/[\/\-]/);
+        if (parts.length === 3) {
+          const iso = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+          if (!fechaInicio) setFechaInicio(iso);
+          if (!fechaPresentacion) setFechaPresentacion(iso);
+        }
+      }
+    } catch {
+      // silently ignore — form stays as-is
+    } finally {
+      setParseando(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitError(null);
@@ -53,14 +92,15 @@ export default function NuevaCausa() {
         id:                `CAU-${Date.now()}`,
         caratula,
         nroExpedienteElectronico: nroExpedienteElectronico || undefined,
-        arbitros: [arbitro1, arbitro2, arbitro3].filter(Boolean),
+        arbitros:          [],
+        arbitrosSuplentes: [suplente1, suplente2, suplente3].filter(Boolean),
         fechaPresentacion,
         fechaInicio,
         ultimoMovimiento:  fechaInicio || fechaPresentacion,
         objetoJuicio,
         sujetos:           sujetos.filter((s) => s.nombre.trim().length > 0),
         causasRelacionadas:[],
-	status:'pendiente',
+        status:            'pendiente',
       });
       if (caratulaArchivo) {
         await subirCaratulaArchivo(causa.id, caratulaArchivo);
@@ -101,7 +141,7 @@ export default function NuevaCausa() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Field label="Fecha de Presentación" required>
+              <Field label="Fecha de Inicio" required>
                 <input
                   type="date"
                   value={fechaPresentacion}
@@ -138,7 +178,7 @@ export default function NuevaCausa() {
               </Field>
             </div>
 
-            <Field label="Carátula" required>
+            <Field label="Demanda" required>
               <textarea
                 rows={3}
                 value={caratula}
@@ -153,41 +193,48 @@ export default function NuevaCausa() {
           <div className="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm space-y-5">
             <div className="flex items-center gap-2 text-[#001f3f] mb-2">
               <Gavel size={18} className="text-blue-600" />
-              <h2 className="font-bold uppercase tracking-wider text-xs">Árbitros Designados</h2>
+              <h2 className="font-bold uppercase tracking-wider text-xs">Composición del Tribunal</h2>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <Field label="Árbitro 1">
-                <input
-                  value={arbitro1}
-                  onChange={(e) => setArbitro1(e.target.value)}
-                  placeholder="Ej: DRA. ANALÍA PÉREZ DE OLIVERA"
-                  className="form-input"
-                />
-              </Field>
-              <Field label="Árbitro 2">
-                <input
-                  value={arbitro2}
-                  onChange={(e) => setArbitro2(e.target.value)}
-                  placeholder="(opcional)"
-                  className="form-input"
-                />
-              </Field>
-              <Field label="Árbitro 3">
-                <input
-                  value={arbitro3}
-                  onChange={(e) => setArbitro3(e.target.value)}
-                  placeholder="(opcional)"
-                  className="form-input"
-                />
-              </Field>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Titulares — estático */}
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Árbitros Titulares</p>
+                <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-2">
+                  {ARBITROS_TITULARES.map((a, i) => (
+                    <div key={i} className="text-sm text-slate-700">
+                      <span className="font-semibold">{a.nombre}</span>
+                      <span className="text-slate-400 ml-2 text-xs">Matr.: {a.matricula}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Suplentes — editable */}
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Árbitros Suplentes</p>
+                <div className="space-y-2">
+                  <input value={suplente1} onChange={(e) => setSuplente1(e.target.value)} placeholder="Suplente 1 (opcional)" className="form-input" />
+                  <input value={suplente2} onChange={(e) => setSuplente2(e.target.value)} placeholder="Suplente 2 (opcional)" className="form-input" />
+                  <input value={suplente3} onChange={(e) => setSuplente3(e.target.value)} placeholder="Suplente 3 (opcional)" className="form-input" />
+                </div>
+              </div>
+            </div>
+
+            {/* Secretario — estático */}
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Secretario</p>
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
+                <span className="text-sm font-semibold text-slate-700">{SECRETARIO_TRIBUNAL.nombre}</span>
+                <span className="text-slate-400 ml-2 text-xs">Matr.: {SECRETARIO_TRIBUNAL.matricula}</span>
+              </div>
             </div>
           </div>
 
           <div className="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm">
             <div className="flex items-center gap-2 text-[#001f3f] mb-4">
               <FileText size={18} className="text-blue-600" />
-              <h2 className="font-bold uppercase tracking-wider text-xs">Carátula del Expediente</h2>
+              <h2 className="font-bold uppercase tracking-wider text-xs">Demanda</h2>
             </div>
 
             <label
@@ -196,7 +243,7 @@ export default function NuevaCausa() {
               onDrop={(e) => {
                 e.preventDefault();
                 setDragActive(false);
-                if (e.dataTransfer.files[0]) setCaratulaArchivo(e.dataTransfer.files[0]);
+                if (e.dataTransfer.files[0]) handleArchivoSeleccionado(e.dataTransfer.files[0]);
               }}
               className={`block border-2 border-dashed rounded-2xl p-10 transition-all text-center cursor-pointer ${
                 dragActive ? 'border-blue-500 bg-blue-50' : 'border-slate-200 bg-slate-50 hover:bg-slate-100'
@@ -206,16 +253,19 @@ export default function NuevaCausa() {
                 <Upload className="text-[#001f3f]" size={28} />
               </div>
               <p className="text-slate-700 font-semibold">
-                {caratulaArchivo ? caratulaArchivo.name : 'Subí el documento de la carátula'}
+                {caratulaArchivo ? caratulaArchivo.name : 'Subí el documento de la demanda'}
               </p>
               <p className="text-slate-400 text-xs mt-1">Solo se permiten archivos PDF (Máx. 10MB)</p>
               <input
                 type="file"
                 accept=".pdf"
                 className="hidden"
-                onChange={(e) => setCaratulaArchivo(e.target.files?.[0] ?? null)}
+                onChange={(e) => handleArchivoSeleccionado(e.target.files?.[0] ?? null)}
               />
             </label>
+            {parseando && (
+              <p className="text-sm text-slate-500 mt-2">Analizando documento...</p>
+            )}
           </div>
 
           <div className="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm space-y-5">
@@ -259,11 +309,11 @@ export default function NuevaCausa() {
                       />
                     </div>
                     <div className="md:col-span-4">
-                      <label className="text-xs font-semibold text-slate-700 ml-1">Representante</label>
+                      <label className="text-xs font-semibold text-slate-700 ml-1">Patrocinante</label>
                       <input
                         value={s.representante ?? ''}
                         onChange={(e) => updateSujeto(i, 'representante', e.target.value)}
-                        placeholder="Nombre del representante"
+                        placeholder="Nombre del patrocinante"
                         className="form-input"
                       />
                     </div>

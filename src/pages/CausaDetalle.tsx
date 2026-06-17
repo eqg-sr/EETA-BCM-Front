@@ -1,16 +1,24 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, Paperclip, FilePlus, Send, Upload, Info, Users, ListOrdered, Link2, Download, Trash2, UserPlus, FileText } from 'lucide-react';
+import { ArrowLeft, Paperclip, FilePlus, Send, Upload, Info, Users, ListOrdered, Link2, Download, Trash2, UserPlus, FileText, Gavel } from 'lucide-react';
+
+const ARBITROS_TITULARES = [
+  { nombre: 'Pedro Alvaro Pérez Catón',  matricula: '(pendiente)' }, // TODO: completar matrícula
+  { nombre: 'Pablo Javier Olaiz',        matricula: '(pendiente)' }, // TODO: completar matrícula
+  { nombre: 'Federico Pithod',           matricula: '(pendiente)' }, // TODO: completar matrícula
+];
+const SECRETARIO_TRIBUNAL = { nombre: 'Santiago María Cardozo', matricula: '(pendiente)' }; // TODO: completar matrícula
 import Layout from '../components/Layout';
 import StatusBadge from '../components/StatusBadge';
-import { useCausas, type Movimiento, type NuevoMovimiento, type MovimientoTipo, type CausaStatus, type Sujeto, type SujetoVinculo, type CausaRelacionada } from '../context/CausasContext';
+import { useCausas, type Causa, type Movimiento, type NuevoMovimiento, type MovimientoTipo, type CausaStatus, type Sujeto, type SujetoVinculo, type CausaRelacionada } from '../context/CausasContext';
 import { useAuth, usePermissions } from '../context/AuthContext';
 import api from '../services/api';
 
 const SECTIONS = [
-  { id: 'info',       label: 'Información General', icon: Info },
-  { id: 'sujetos',    label: 'Sujetos',              icon: Users },
-  { id: 'movimientos',label: 'Movimientos',           icon: ListOrdered },
+  { id: 'info',       label: 'Información General',   icon: Info },
+  { id: 'tribunal',   label: 'Composición del Tribunal', icon: Gavel },
+  { id: 'sujetos',    label: 'Sujetos',               icon: Users },
+  { id: 'movimientos',label: 'Movimientos',            icon: ListOrdered },
   { id: 'relacionadas',label: 'Causas Relacionadas',  icon: Link2 },
 ] as const;
 
@@ -64,7 +72,6 @@ export default function CausaDetalle() {
 
   const causa = currentCausa;
   const allMovimientos = causa.expedientes.flatMap((e) => e.movimientos);
-  const arbitrosStr = causa.arbitros && causa.arbitros.length > 0 ? causa.arbitros.join(', ') : '-';
 
   const handleStatusChange = async (newStatus: CausaStatus) => {
     if (!id) return;
@@ -133,8 +140,8 @@ export default function CausaDetalle() {
           )}
         </div>
         <div className="text-right text-xs">
-          <div className="text-slate-400 uppercase font-semibold">Árbitros Designados</div>
-          <div className="text-slate-700 font-semibold">{arbitrosStr}</div>
+          <div className="text-slate-400 uppercase font-semibold">Secretario</div>
+          <div className="text-slate-700 font-semibold">{SECRETARIO_TRIBUNAL.nombre}</div>
         </div>
       </div>
 
@@ -159,19 +166,18 @@ export default function CausaDetalle() {
           <Section id="info" title="Información General" icon={Info}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <InfoRow label="Identificador"        value={`${causa.identificador} (${causa.numeroInterno})`} />
-              <InfoRow label="Carátula"             value={causa.caratula} />
+              <InfoRow label="Demanda"               value={causa.caratula} />
               <InfoRow label="Tribunal"             value={causa.tribunal} />
               {causa.nroExpedienteElectronico && (
                 <InfoRow label="Nro. Expediente Electrónico" value={causa.nroExpedienteElectronico} />
               )}
-              <InfoRow label="Árbitros Designados"  value={arbitrosStr} />
-              <InfoRow label="Fecha de Presentación" value={causa.fechaPresentacion} />
+              <InfoRow label="Fecha de Inicio"        value={causa.fechaPresentacion} />
               <InfoRow label="Fecha de Inicio"      value={causa.fechaInicio} />
               <InfoRow label="Último Movimiento"    value={causa.ultimoMovimiento} />
               <InfoRow label="Objeto del Juicio"    value={causa.objetoJuicio} />
               {causa.nombreArchivo && (
                 <div>
-                  <div className="text-[11px] uppercase tracking-wider text-slate-400 font-semibold">Adjunto de Carátula</div>
+                  <div className="text-[11px] uppercase tracking-wider text-slate-400 font-semibold">Adjunto de Demanda</div>
                   <button
                     type="button"
                     onClick={handleDescargarCaratula}
@@ -183,6 +189,10 @@ export default function CausaDetalle() {
                 </div>
               )}
             </div>
+          </Section>
+
+          <Section id="tribunal" title="Composición del Tribunal" icon={Gavel}>
+            <ComposicionTribunalBlock causa={causa} isSecretario={isSecretario} />
           </Section>
 
           <Section id="sujetos" title="Sujetos" icon={Users}>
@@ -237,6 +247,88 @@ function InfoRow({ label, value }: { label: string; value: string }) {
   );
 }
 
+function ComposicionTribunalBlock({ causa, isSecretario }: { causa: Causa; isSecretario: boolean }) {
+  const { actualizarCausa } = useCausas();
+  const [s1, setS1] = useState(causa.arbitrosSuplentes?.[0] ?? '');
+  const [s2, setS2] = useState(causa.arbitrosSuplentes?.[1] ?? '');
+  const [s3, setS3] = useState(causa.arbitrosSuplentes?.[2] ?? '');
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved]   = useState(false);
+
+  const handleSave = async () => {
+    setSaving(true);
+    setSaved(false);
+    try {
+      await actualizarCausa(causa.id, {
+        arbitrosSuplentes: [s1, s2, s3].filter(Boolean),
+      });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const suplentesGuardados = causa.arbitrosSuplentes ?? [];
+
+  return (
+    <div className="space-y-5">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        {/* Titulares — estático */}
+        <div>
+          <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">Árbitros Titulares</p>
+          <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-2">
+            {ARBITROS_TITULARES.map((a, i) => (
+              <div key={i} className="text-sm text-slate-700">
+                <span className="font-semibold">{a.nombre}</span>
+                <span className="text-slate-400 ml-2 text-xs">Matr.: {a.matricula}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Suplentes */}
+        <div>
+          <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">Árbitros Suplentes</p>
+          {isSecretario ? (
+            <div className="space-y-2">
+              <input value={s1} onChange={(e) => setS1(e.target.value)} placeholder="Suplente 1 (opcional)" className="form-input text-sm" />
+              <input value={s2} onChange={(e) => setS2(e.target.value)} placeholder="Suplente 2 (opcional)" className="form-input text-sm" />
+              <input value={s3} onChange={(e) => setS3(e.target.value)} placeholder="Suplente 3 (opcional)" className="form-input text-sm" />
+              <button
+                type="button"
+                onClick={handleSave}
+                disabled={saving}
+                className="flex items-center gap-1.5 px-4 py-1.5 bg-[#001f3f] text-white rounded-lg text-xs font-bold hover:bg-[#002d5a] disabled:opacity-50 transition-all"
+              >
+                <Send size={12} />
+                {saving ? 'Guardando...' : saved ? '¡Guardado!' : 'Guardar suplentes'}
+              </button>
+            </div>
+          ) : (
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-2 min-h-[60px]">
+              {suplentesGuardados.length > 0 ? suplentesGuardados.map((s, i) => (
+                <div key={i} className="text-sm font-semibold text-slate-700">{s}</div>
+              )) : (
+                <span className="text-sm text-slate-400">No designados</span>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Secretario — estático */}
+      <div>
+        <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">Secretario</p>
+        <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
+          <span className="text-sm font-semibold text-slate-700">{SECRETARIO_TRIBUNAL.nombre}</span>
+          <span className="text-slate-400 ml-2 text-xs">Matr.: {SECRETARIO_TRIBUNAL.matricula}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function SujetosTable({ sujetos }: { sujetos: Sujeto[] }) {
   return (
     <div className="overflow-x-auto rounded-xl border border-slate-200">
@@ -245,7 +337,8 @@ function SujetosTable({ sujetos }: { sujetos: Sujeto[] }) {
           <tr className="text-blue-700 text-xs uppercase tracking-wider">
             <th className="px-4 py-3 font-semibold">Vínculo</th>
             <th className="px-4 py-3 font-semibold">Nombre/Denominación</th>
-            <th className="px-4 py-3 font-semibold">Representante</th>
+            <th className="px-4 py-3 font-semibold">CUIT</th>
+            <th className="px-4 py-3 font-semibold">Patrocinante</th>
             <th className="px-4 py-3 font-semibold">Domicilio</th>
             <th className="px-4 py-3 font-semibold">Domicilio Electrónico</th>
             {/* Estado de aprobación oculto: flujo de autorización por mail desactivado */}
@@ -261,6 +354,7 @@ function SujetosTable({ sujetos }: { sujetos: Sujeto[] }) {
                 )}
               </td>
               <td className="px-4 py-3 text-slate-800">{s.nombre}</td>
+              <td className="px-4 py-3 font-mono text-xs text-slate-700">{s.cuit ?? '-'}</td>
               <td className="px-4 py-3 text-blue-700">{s.representante ?? '-'}</td>
               <td className="px-4 py-3 text-blue-700">{s.domicilio ?? '-'}</td>
               <td className="px-4 py-3 text-blue-700 font-mono text-xs">{s.domicilioElectronico ?? '-'}</td>
@@ -288,6 +382,7 @@ function SujetosBlock({
   const [representante, setRepresentante]     = useState('');
   const [domicilio, setDomicilio]             = useState('');
   const [domicilioElectronico, setDomicilioElectronico] = useState('');
+  const [cuit, setCuit]                       = useState('');
   const [calidad, setCalidad]                 = useState('');
   const [isSending, setIsSending]             = useState(false);
   const [formError, setFormError]             = useState<string | null>(null);
@@ -304,6 +399,7 @@ function SujetosBlock({
         representante: representante.trim() || undefined,
         domicilio: domicilio.trim() || undefined,
         domicilioElectronico: domicilioElectronico.trim() || undefined,
+        cuit: cuit.trim() || undefined,
         calidad: vinculo === 'TERCERO' ? (calidad.trim() || undefined) : undefined,
       });
       setVinculo('ACTOR');
@@ -311,6 +407,7 @@ function SujetosBlock({
       setRepresentante('');
       setDomicilio('');
       setDomicilioElectronico('');
+      setCuit('');
       setCalidad('');
     } catch (err: any) {
       setFormError(err.response?.data?.message ?? 'Error al agregar el sujeto');
@@ -348,13 +445,21 @@ function SujetosBlock({
                 required
               />
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+              <input
+                value={cuit}
+                onChange={(e) => setCuit(e.target.value)}
+                placeholder="CUIT (XX-XXXXXXXX-X, opcional)"
+                className="form-input text-sm"
+              />
               <input
                 value={representante}
                 onChange={(e) => setRepresentante(e.target.value)}
-                placeholder="Representante (opcional)"
+                placeholder="Patrocinante (opcional)"
                 className="form-input text-sm"
               />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
               <input
                 value={domicilio}
                 onChange={(e) => setDomicilio(e.target.value)}
@@ -373,7 +478,7 @@ function SujetosBlock({
               <input
                 value={calidad}
                 onChange={(e) => setCalidad(e.target.value)}
-                placeholder="Calidad / Rol (ej: Testigo, Perito, Representante)"
+                placeholder="Calidad / Rol (ej: Testigo, Perito, Patrocinante)"
                 className="form-input text-sm"
               />
             )}
@@ -572,14 +677,18 @@ function CausasRelacionadasBlock({
 }
 
 const MOVIMIENTO_TIPO_LABELS: Record<MovimientoTipo, string> = {
-  ACT: 'Actuación',
-  ESC: 'Escrito',
-  CED: 'Cédula',
-  RES: 'Resolución',
-  NOT: 'Notificación',
-  AUD: 'Audiencia',
-  PER: 'Pericia',
-  SEN: 'Sentencia',
+  DEMANDA_ACTUACION:      'DEMANDA DE ACTUACIÓN',
+  DECRETO:                'DECRETO',
+  CONTESTACION:           'CONTESTACIÓN DE LA DEMANDA',
+  CONTESTACION_TRASLADO:  'CONTESTACIÓN TRASLADO DE LA DEMANDA',
+  VISTA_CAUSA:            'VISTA DE CAUSA',
+  AUDIENCIA_INICIAL:      'AUDIENCIA INICIAL',
+  AUTOS_LAUDAR:           'AUTOS PARA LAUDAR',
+  LAUDO:                  'LAUDO',
+  ESCRITO:                'ESCRITO',
+  CEDULA:                 'CÉDULA',
+  NOTIFICACION:           'NOTIFICACIÓN',
+  PERICIA:                'PERICIA',
 };
 
 const DESCRIPCION_MAX = 2000;
@@ -603,7 +712,7 @@ function MovimientosBlock({
   const puedeCargarMovimiento =
     user?.role === 'secretario' || user?.role === 'arbitro' || isAsignado;
 
-  const [movTipo, setMovTipo]           = useState<MovimientoTipo>('ACT');
+  const [movTipo, setMovTipo]           = useState<MovimientoTipo>('DEMANDA_ACTUACION');
   const [movTitulo, setMovTitulo]       = useState('');
   const [movDescripcion, setMovDescripcion] = useState('');
   const [movSujetoNombre, setMovSujetoNombre] = useState('');
@@ -644,7 +753,7 @@ function MovimientosBlock({
         });
       }
 
-      const prefix = movTipo === 'ACT' ? 'AC' : movTipo === 'ESC' ? 'ES' : movTipo === 'CED' ? 'CD' : movTipo === 'RES' ? 'RS' : movTipo === 'NOT' ? 'NT' : movTipo === 'AUD' ? 'AU' : 'PE';
+      const prefix = movTipo.slice(0, 3).toUpperCase();
       const mov: NuevoMovimiento = {
         id:          `m-${Date.now()}`,
         fecha:       new Date().toISOString(),
@@ -654,12 +763,12 @@ function MovimientosBlock({
         numero:      `${prefix}-${new Date().getFullYear()}-${Math.floor(Math.random() * 90000 + 10000)}`,
         tribunal:    'TRIBUNAL ARBITRAL BCM',
         presentante: user.name,
-        acceso:      movTipo === 'ESC' ? 'Escrito de parte' : 'Resolución',
+        acceso:      movTipo === 'ESCRITO' ? 'Escrito de parte' : 'Resolución',
         sujetoNombre: movSujetoNombre || undefined,
         archivo:     movArchivo ?? undefined,
       };
       await agregarMovimiento(causaId, nroExpediente, mov);
-      setMovTipo('ACT');
+      setMovTipo('DEMANDA_ACTUACION');
       setMovTitulo('');
       setMovDescripcion('');
       setMovSujetoNombre('');
@@ -699,28 +808,22 @@ function MovimientosBlock({
             Cargar Movimiento
           </h3>
           <form onSubmit={handleCargarMovimiento} className="space-y-3">
-            <div className="grid grid-cols-12 gap-2">
-              <div className="col-span-4">
-                <select
-                  value={movTipo}
-                  onChange={(e) => setMovTipo(e.target.value as MovimientoTipo)}
-                  className="form-input text-sm"
-                >
-                  {(Object.keys(MOVIMIENTO_TIPO_LABELS) as MovimientoTipo[]).map((t) => (
-                    <option key={t} value={t}>{MOVIMIENTO_TIPO_LABELS[t]}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="col-span-8">
-                <input
-                  value={movTitulo}
-                  onChange={(e) => setMovTitulo(e.target.value)}
-                  placeholder="Título / descripción"
-                  className="form-input text-sm"
-                  required
-                />
-              </div>
-            </div>
+            <select
+              value={movTipo}
+              onChange={(e) => setMovTipo(e.target.value as MovimientoTipo)}
+              className="form-input text-sm w-full"
+            >
+              {(Object.keys(MOVIMIENTO_TIPO_LABELS) as MovimientoTipo[]).map((t) => (
+                <option key={t} value={t}>{MOVIMIENTO_TIPO_LABELS[t]}</option>
+              ))}
+            </select>
+            <input
+              value={movTitulo}
+              onChange={(e) => setMovTitulo(e.target.value)}
+              placeholder="Título / descripción"
+              className="form-input text-sm"
+              required
+            />
             <div>
               <select
                 value={movSujetoNombre}
@@ -805,8 +908,8 @@ function MovimientosBlock({
                     <div className="text-xs text-slate-500 mt-0.5 leading-relaxed">{m.descripcion}</div>
                   )}
                 </td>
-                <td className="px-4 py-3 font-semibold text-slate-700">
-                  {m.tipo}
+                <td className="px-4 py-3 font-semibold text-slate-700 whitespace-normal min-w-[160px]">
+                  {MOVIMIENTO_TIPO_LABELS[m.tipo] ?? m.tipo}
                   {m.sujetoNombre && (
                     <div className="text-xs font-normal text-slate-500 mt-0.5">{m.sujetoNombre}</div>
                   )}

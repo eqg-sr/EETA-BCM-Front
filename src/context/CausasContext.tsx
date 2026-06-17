@@ -11,12 +11,25 @@ export type Sujeto = {
   representante?: string;
   domicilio?: string;
   domicilioElectronico?: string;
+  cuit?: string;
   aprobado?: boolean;
   aprobacionToken?: string;
   calidad?: string;
 };
 
-export type MovimientoTipo = 'ACT' | 'ESC' | 'CED' | 'RES' | 'NOT' | 'AUD' | 'PER' | 'SEN';
+export type MovimientoTipo =
+  | 'DEMANDA_ACTUACION'
+  | 'DECRETO'
+  | 'CONTESTACION'
+  | 'CONTESTACION_TRASLADO'
+  | 'VISTA_CAUSA'
+  | 'AUDIENCIA_INICIAL'
+  | 'AUTOS_LAUDAR'
+  | 'LAUDO'
+  | 'ESCRITO'
+  | 'CEDULA'
+  | 'NOTIFICACION'
+  | 'PERICIA';
 
 export type Movimiento = {
   id: string;
@@ -94,6 +107,7 @@ export type Causa = {
   tribunal: string;
   nroExpedienteElectronico?: string;
   arbitros?: string[];
+  arbitrosSuplentes?: string[];
   fechaPresentacion: string;
   fechaInicio: string;
   ultimoMovimiento: string;

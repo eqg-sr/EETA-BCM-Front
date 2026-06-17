@@ -94,9 +94,9 @@ export default function NuevaCausa() {
         nroExpedienteElectronico: nroExpedienteElectronico || undefined,
         arbitros:          [],
         arbitrosSuplentes: [suplente1, suplente2, suplente3].filter(Boolean),
-        fechaPresentacion,
+        fechaPresentacion: fechaInicio,
         fechaInicio,
-        ultimoMovimiento:  fechaInicio || fechaPresentacion,
+        ultimoMovimiento:  fechaInicio,
         objetoJuicio,
         sujetos:           sujetos.filter((s) => s.nombre.trim().length > 0),
         causasRelacionadas:[],
@@ -141,15 +141,6 @@ export default function NuevaCausa() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Field label="Fecha de Inicio" required>
-                <input
-                  type="date"
-                  value={fechaPresentacion}
-                  onChange={(e) => setFechaPresentacion(e.target.value)}
-                  className="form-input"
-                  required
-                />
-              </Field>
               <Field label="Fecha de Inicio" required>
                 <input
                   type="date"
@@ -330,7 +321,16 @@ export default function NuevaCausa() {
                       )}
                     </div>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div>
+                      <label className="text-xs font-semibold text-slate-700 ml-1">CUIT <span className="font-normal text-slate-400">(opcional)</span></label>
+                      <input
+                        value={s.cuit ?? ''}
+                        onChange={(e) => updateSujeto(i, 'cuit', e.target.value)}
+                        placeholder="XX-XXXXXXXX-X"
+                        className="form-input"
+                      />
+                    </div>
                     <div>
                       <label className="text-xs font-semibold text-slate-700 ml-1">Domicilio</label>
                       <input

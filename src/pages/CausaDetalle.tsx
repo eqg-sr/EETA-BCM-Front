@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, Paperclip, FilePlus, Send, Upload, Info, Users, ListOrdered, Link2, Download, Trash2, UserPlus, FileText, Gavel } from 'lucide-react';
+import { ArrowLeft, Paperclip, FilePlus, Send, Upload, Info, Users, ListOrdered, Link2, Download, Trash2, UserPlus, FileText, Gavel, Search, ChevronDown } from 'lucide-react';
 
 const ARBITROS_TITULARES = [
   { nombre: 'Pedro Alvaro Pérez Catón',  matricula: '(pendiente)' }, // TODO: completar matrícula
@@ -112,7 +112,7 @@ export default function CausaDetalle() {
       <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 mb-8 pb-5 border-b border-slate-200">
         <div>
           <div className="text-sm font-mono text-[#001f3f] font-semibold">
-            {causa.identificador} <span className="text-slate-400">({causa.numeroInterno})</span> {causa.tribunal}
+            {causa.nroExpedienteElectronico || causa.numeroInterno} {causa.tribunal}
           </div>
           <h1 className="text-xl md:text-2xl font-extrabold text-slate-900 mt-1">{causa.caratula}</h1>
           <div className="flex items-center gap-3 mt-2 flex-wrap">
@@ -165,14 +165,10 @@ export default function CausaDetalle() {
         <div className="lg:col-span-9 space-y-8">
           <Section id="info" title="Información General" icon={Info}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <InfoRow label="Identificador"        value={`${causa.identificador} (${causa.numeroInterno})`} />
+              <InfoRow label="N° de Expediente"     value={causa.nroExpedienteElectronico || causa.numeroInterno} />
               <InfoRow label="Demanda"               value={causa.caratula} />
               <InfoRow label="Tribunal"             value={causa.tribunal} />
-              {causa.nroExpedienteElectronico && (
-                <InfoRow label="Nro. Expediente Electrónico" value={causa.nroExpedienteElectronico} />
-              )}
-              <InfoRow label="Fecha de Inicio"        value={causa.fechaPresentacion} />
-              <InfoRow label="Fecha de Inicio"      value={causa.fechaInicio} />
+              <InfoRow label="Fecha de Inicio"     value={causa.fechaInicio} />
               <InfoRow label="Último Movimiento"    value={causa.ultimoMovimiento} />
               <InfoRow label="Objeto del Juicio"    value={causa.objetoJuicio} />
               {causa.nombreArchivo && (
@@ -691,6 +687,48 @@ const MOVIMIENTO_TIPO_LABELS: Record<MovimientoTipo, string> = {
   PERICIA:                'PERICIA',
 };
 
+type MovimientoCategoria = 'Resolución' | 'Presentación' | 'Notificación';
+
+const MOVIMIENTO_CATEGORIA: Record<MovimientoTipo, MovimientoCategoria> = {
+  DECRETO:               'Resolución',
+  VISTA_CAUSA:           'Resolución',
+  AUDIENCIA_INICIAL:     'Resolución',
+  AUTOS_LAUDAR:          'Resolución',
+  LAUDO:                 'Resolución',
+  DEMANDA_ACTUACION:     'Presentación',
+  CONTESTACION:          'Presentación',
+  CONTESTACION_TRASLADO: 'Presentación',
+  ESCRITO:               'Presentación',
+  PERICIA:               'Presentación',
+  CEDULA:                'Notificación',
+  NOTIFICACION:          'Notificación',
+};
+
+const CATEGORIA_BADGE: Record<MovimientoCategoria, string> = {
+  Resolución:   'bg-green-100 text-green-800',
+  Presentación: 'bg-violet-100 text-violet-800',
+  Notificación: 'bg-amber-100 text-amber-800',
+};
+
+const FILTER_TABS: { label: string; value: MovimientoCategoria | 'Todas' }[] = [
+  { label: 'Todas',         value: 'Todas' },
+  { label: 'Resoluciones',  value: 'Resolución' },
+  { label: 'Presentaciones',value: 'Presentación' },
+  { label: 'Notificaciones',value: 'Notificación' },
+];
+
+function formatMovFecha(iso: string) {
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return { date: iso, time: '' };
+  const date = d.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  const time = d.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false });
+  return { date, time };
+}
+
+function isRecent(iso: string) {
+  return Date.now() - new Date(iso).getTime() < 7 * 24 * 60 * 60 * 1000;
+}
+
 const DESCRIPCION_MAX = 2000;
 const MOV_ARCHIVO_MAX_SIZE = 20 * 1024 * 1024;
 
@@ -720,6 +758,9 @@ function MovimientosBlock({
   const [movArchivoError, setMovArchivoError] = useState<string | null>(null);
   const [isSending, setIsSending]       = useState(false);
   const [movError, setMovError]         = useState<string | null>(null);
+  const [busqueda, setBusqueda]         = useState('');
+  const [categoriaFiltro, setCategoriaFiltro] = useState<MovimientoCategoria | 'Todas'>('Todas');
+  const [expandedId, setExpandedId]     = useState<string | null>(null);
 
   const handleArchivoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] ?? null;
@@ -888,50 +929,117 @@ function MovimientosBlock({
         </div>
       )}
 
+      {/* Buscador + filtros */}
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="flex items-center gap-2 border border-slate-200 rounded-lg px-3 py-1.5 bg-white text-sm text-slate-500 w-44">
+          <Search size={14} className="shrink-0" />
+          <input
+            value={busqueda}
+            onChange={(e) => setBusqueda(e.target.value)}
+            placeholder="Buscar..."
+            className="outline-none bg-transparent w-full text-slate-800 placeholder:text-slate-400"
+          />
+        </div>
+        {FILTER_TABS.map((tab) => (
+          <button
+            key={tab.value}
+            onClick={() => setCategoriaFiltro(tab.value)}
+            className={`px-3 py-1.5 rounded-lg border text-sm font-medium transition-colors ${
+              categoriaFiltro === tab.value
+                ? 'bg-[#001f3f] text-white border-[#001f3f]'
+                : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400'
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+        <span className="text-xs text-slate-400 ml-1">
+          {movimientos.length} actuación{movimientos.length !== 1 ? 'es' : ''}
+        </span>
+      </div>
+
+      {/* Tabla */}
       <div className="overflow-x-auto rounded-xl border border-slate-200">
         <table className="w-full text-sm">
-          <thead className="bg-slate-50 text-left">
-            <tr className="text-blue-700 text-xs uppercase tracking-wider">
-              <th className="px-4 py-3 font-semibold">Fecha</th>
-              <th className="px-4 py-3 font-semibold">Descripción</th>
-              <th className="px-4 py-3 font-semibold">Tipo</th>
-              <th className="px-4 py-3 font-semibold">Adjunto</th>
+          <thead className="bg-slate-50 border-b border-slate-200">
+            <tr className="text-slate-500 text-xs uppercase tracking-wider">
+              <th className="px-4 py-3 font-semibold text-left w-32">Fecha</th>
+              <th className="px-4 py-3 font-semibold text-left">Descripción</th>
+              <th className="px-4 py-3 font-semibold text-left w-40">Tipo</th>
+              <th className="px-4 py-3 font-semibold text-left w-44">Adjunto</th>
+              <th className="px-4 py-3 w-8" />
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {movimientos.map((m) => (
-              <tr key={m.id} className="hover:bg-slate-50">
-                <td className="px-4 py-3 text-slate-700 whitespace-nowrap">{m.fecha}</td>
-                <td className="px-4 py-3">
-                  <div className="text-slate-800 font-medium">{m.titulo}</div>
-                  {m.descripcion && (
-                    <div className="text-xs text-slate-500 mt-0.5 leading-relaxed">{m.descripcion}</div>
-                  )}
-                </td>
-                <td className="px-4 py-3 font-semibold text-slate-700 whitespace-normal min-w-[160px]">
-                  {MOVIMIENTO_TIPO_LABELS[m.tipo] ?? m.tipo}
-                  {m.sujetoNombre && (
-                    <div className="text-xs font-normal text-slate-500 mt-0.5">{m.sujetoNombre}</div>
-                  )}
-                </td>
-                <td className="px-4 py-3">
-                  {m.nombreArchivo ? (
-                    <button
-                      onClick={() => handleDescargarMovimiento(m)}
-                      className="flex items-center gap-1 text-xs text-blue-700 hover:underline"
-                    >
-                      <Download size={13} />
-                      {m.nombreArchivo}
-                    </button>
-                  ) : m.adjuntos ? (
-                    <Paperclip size={14} className="text-slate-500" />
-                  ) : null}
-                </td>
-              </tr>
-            ))}
+            {movimientos
+              .filter((m) => {
+                const q = busqueda.toLowerCase();
+                const matchQ = !q || m.titulo.toLowerCase().includes(q) || (m.descripcion ?? '').toLowerCase().includes(q);
+                const matchCat = categoriaFiltro === 'Todas' || MOVIMIENTO_CATEGORIA[m.tipo] === categoriaFiltro;
+                return matchQ && matchCat;
+              })
+              .map((m) => {
+                const { date, time } = formatMovFecha(m.fecha);
+                const cat = MOVIMIENTO_CATEGORIA[m.tipo];
+                const expanded = expandedId === m.id;
+                return (
+                  <tr key={m.id} className="hover:bg-slate-50 align-top">
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <div className="flex items-center gap-1.5">
+                        {isRecent(m.fecha) && (
+                          <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0 mt-0.5" />
+                        )}
+                        <div>
+                          <div className="font-semibold text-slate-800">{date}</div>
+                          {time && <div className="text-xs text-slate-400">{time} hs</div>}
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="font-semibold text-slate-800">{m.titulo}</div>
+                      {m.descripcion && (
+                        <div className={`text-xs text-slate-500 mt-0.5 leading-relaxed ${expanded ? '' : 'line-clamp-2'}`}>
+                          {m.descripcion}
+                        </div>
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold ${CATEGORIA_BADGE[cat]}`}>
+                        {cat}
+                      </span>
+                      {m.sujetoNombre && (
+                        <div className="text-xs text-slate-500 mt-1">{m.sujetoNombre}</div>
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
+                      {m.nombreArchivo ? (
+                        <button
+                          onClick={() => handleDescargarMovimiento(m)}
+                          className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-slate-200 bg-white text-xs text-slate-700 hover:border-slate-400 transition-colors"
+                        >
+                          <Download size={12} className="text-slate-500" />
+                          <span className="max-w-[120px] truncate">{m.nombreArchivo}</span>
+                        </button>
+                      ) : (
+                        <span className="text-slate-300">—</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
+                      {m.descripcion && m.descripcion.length > 80 && (
+                        <button
+                          onClick={() => setExpandedId(expanded ? null : m.id)}
+                          className="p-1 text-slate-400 hover:text-slate-600 transition-colors"
+                        >
+                          <ChevronDown size={16} className={`transition-transform ${expanded ? 'rotate-180' : ''}`} />
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
             {movimientos.length === 0 && (
               <tr>
-                <td colSpan={4} className="px-4 py-10 text-center text-slate-400 text-sm">
+                <td colSpan={5} className="px-4 py-10 text-center text-slate-400 text-sm">
                   Sin movimientos registrados.
                 </td>
               </tr>

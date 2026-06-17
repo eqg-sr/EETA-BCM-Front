@@ -6,6 +6,7 @@ import { useCausas, type Sujeto } from '../context/CausasContext';
 import { usePermissions } from '../context/AuthContext';
 import api from '../services/api';
 import { ARBITROS_TITULARES, ARBITROS_TITULARES_NOMBRES, SECRETARIO_TRIBUNAL } from '../constants/tribunal';
+import HelpTip from '../components/HelpTip';
 
 export default function NuevaCausa() {
   const navigate = useNavigate();
@@ -135,7 +136,7 @@ export default function NuevaCausa() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Field label="Fecha de Inicio" required>
+              <Field label="Fecha de Inicio" required help="Fecha en que se inicia formalmente el expediente ante el tribunal.">
                 <input
                   type="date"
                   value={fechaInicio}
@@ -144,7 +145,7 @@ export default function NuevaCausa() {
                   required
                 />
               </Field>
-              <Field label="Objeto del Juicio" required>
+              <Field label="Objeto del Juicio" required help="Describe brevemente el tipo de disputa: ej. 'Incumplimiento contractual', 'Cobro de honorarios', 'Resolución de contrato'.">
                 <input
                   value={objetoJuicio}
                   onChange={(e) => setObjetoJuicio(e.target.value)}
@@ -153,7 +154,7 @@ export default function NuevaCausa() {
                   required
                 />
               </Field>
-              <Field label="Nro. Expediente Electrónico">
+              <Field label="Nro. Expediente Electrónico" help="Número oficial asignado por el sistema de gestión electrónica. Podés dejarlo vacío si aún no fue asignado; se puede completar después.">
                 <input
                   value={nroExpedienteElectronico}
                   onChange={(e) => setNroExpedienteElectronico(e.target.value)}
@@ -163,7 +164,7 @@ export default function NuevaCausa() {
               </Field>
             </div>
 
-            <Field label="Demanda" required>
+            <Field label="Demanda" required help="Identificación formal del expediente: 'ACTOR c/ DEMANDADO p/ ACCIÓN'. Si subís el PDF de la demanda, el sistema lo intenta completar automáticamente.">
               <textarea
                 rows={3}
                 value={caratula}
@@ -197,7 +198,10 @@ export default function NuevaCausa() {
 
               {/* Suplentes — editable */}
               <div>
-                <p className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Árbitros Suplentes</p>
+                <p className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2 flex items-center gap-1.5">
+                  Árbitros Suplentes
+                  <HelpTip text="Árbitros designados para reemplazar a los titulares en caso de impedimento, excusación o inhibición. Son opcionales." position="right" />
+                </p>
                 <div className="space-y-2">
                   <input value={suplente1} onChange={(e) => setSuplente1(e.target.value)} placeholder="Suplente 1 (opcional)" className="form-input" />
                   <input value={suplente2} onChange={(e) => setSuplente2(e.target.value)} placeholder="Suplente 2 (opcional)" className="form-input" />
@@ -220,6 +224,7 @@ export default function NuevaCausa() {
             <div id="tour-nueva-demanda" className="flex items-center gap-2 text-[#001f3f] mb-4">
               <FileText size={18} className="text-blue-600" />
               <h2 className="font-bold uppercase tracking-wider text-xs">Demanda</h2>
+              <HelpTip text="Subí el PDF de la demanda. El sistema intentará extraer automáticamente la carátula y la fecha del documento para completar los campos del formulario." position="right" />
             </div>
 
             <label
@@ -273,7 +278,10 @@ export default function NuevaCausa() {
                 <div key={i} className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3">
                   <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
                     <div className="md:col-span-3">
-                      <label className="text-xs font-semibold text-slate-700 ml-1">Vínculo</label>
+                      <label className="text-xs font-semibold text-slate-700 ml-1 flex items-center gap-1">
+                        Vínculo
+                        <HelpTip text="Rol del sujeto: ACTOR (parte que demanda), DEMANDADO (parte demandada), TERCERO (cualquier otro involucrado: perito, testigo, etc.)." position="bottom" width="w-60" />
+                      </label>
                       <select
                         value={s.vinculo}
                         onChange={(e) => updateSujeto(i, 'vinculo', e.target.value)}
@@ -294,7 +302,10 @@ export default function NuevaCausa() {
                       />
                     </div>
                     <div className="md:col-span-4">
-                      <label className="text-xs font-semibold text-slate-700 ml-1">Patrocinante</label>
+                      <label className="text-xs font-semibold text-slate-700 ml-1 flex items-center gap-1">
+                        Patrocinante
+                        <HelpTip text="Abogado o representante legal que patrocina a esta parte en el proceso." position="bottom" />
+                      </label>
                       <input
                         value={s.representante ?? ''}
                         onChange={(e) => updateSujeto(i, 'representante', e.target.value)}
@@ -317,7 +328,10 @@ export default function NuevaCausa() {
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                     <div>
-                      <label className="text-xs font-semibold text-slate-700 ml-1">CUIT <span className="font-normal text-slate-400">(opcional)</span></label>
+                      <label className="text-xs font-semibold text-slate-700 ml-1 flex items-center gap-1">
+                        <span>CUIT <span className="font-normal text-slate-400">(opcional)</span></span>
+                        <HelpTip text="Clave Única de Identificación Tributaria. Formato: XX-XXXXXXXX-X." position="bottom" />
+                      </label>
                       <input
                         value={s.cuit ?? ''}
                         onChange={(e) => updateSujeto(i, 'cuit', e.target.value)}
@@ -335,7 +349,10 @@ export default function NuevaCausa() {
                       />
                     </div>
                     <div>
-                      <label className="text-xs font-semibold text-slate-700 ml-1">Domicilio Electrónico</label>
+                      <label className="text-xs font-semibold text-slate-700 ml-1 flex items-center gap-1">
+                        Domicilio Electrónico
+                        <HelpTip text="Email donde este sujeto recibirá las notificaciones electrónicas del tribunal." position="bottom" />
+                      </label>
                       <input
                         type="email"
                         value={s.domicilioElectronico ?? ''}
@@ -380,11 +397,12 @@ export default function NuevaCausa() {
   );
 }
 
-function Field({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
+function Field({ label, required, help, children }: { label: string; required?: boolean; help?: string; children: React.ReactNode }) {
   return (
     <div className="space-y-1.5">
-      <label className="text-sm font-semibold text-slate-700 ml-1">
-        {label} {required && <span className="text-red-500">*</span>}
+      <label className="text-sm font-semibold text-slate-700 ml-1 flex items-center gap-1.5">
+        <span>{label}{required && <span className="text-red-500 ml-0.5">*</span>}</span>
+        {help && <HelpTip text={help} />}
       </label>
       {children}
     </div>

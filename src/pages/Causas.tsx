@@ -4,6 +4,7 @@ import { FolderOpen, Plus, Search, ExternalLink, ChevronLeft, ChevronRight, Down
 import Layout from '../components/Layout';
 import { useCausas, type Causa, type CausaStatus } from '../context/CausasContext';
 import { usePermissions } from '../context/AuthContext';
+import HelpTip from '../components/HelpTip';
 import api from '../services/api';
 import { ARBITROS_TITULARES_NOMBRES } from '../constants/tribunal';
 
@@ -80,14 +81,17 @@ export default function Causas() {
 
         <div className="flex items-center gap-3">
           {canCreateCausa && (
-            <Link
-              id="tour-nuevo-expediente"
-              to="/causas/new"
-              className="flex items-center gap-2 px-5 py-2.5 bg-[#001f3f] text-white rounded-xl hover:bg-[#002d5a] transition-all shadow-lg shadow-blue-900/20 text-sm font-bold active:scale-95"
-            >
-              <Plus size={18} strokeWidth={3} />
-              Nuevo Expediente
-            </Link>
+            <div className="flex items-center gap-2">
+              <Link
+                id="tour-nuevo-expediente"
+                to="/causas/new"
+                className="flex items-center gap-2 px-5 py-2.5 bg-[#001f3f] text-white rounded-xl hover:bg-[#002d5a] transition-all shadow-lg shadow-blue-900/20 text-sm font-bold active:scale-95"
+              >
+                <Plus size={18} strokeWidth={3} />
+                Nuevo Expediente
+              </Link>
+              <HelpTip text="Abre el formulario para registrar un nuevo expediente en el tribunal." position="left" />
+            </div>
           )}
         </div>
       </div>
@@ -102,16 +106,19 @@ export default function Causas() {
             className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#001f3f]/10 focus:border-[#001f3f] transition-all outline-none text-sm"
           />
         </div>
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value as CausaStatus | '')}
-          className="sm:w-48 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#001f3f]/10 focus:border-[#001f3f] transition-all outline-none text-sm text-slate-700"
-        >
-          <option value="">Todos los estados</option>
-          {STATUS_OPTIONS.map((o) => (
-            <option key={o.value} value={o.value}>{o.label}</option>
-          ))}
-        </select>
+        <div className="flex items-center gap-2">
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value as CausaStatus | '')}
+            className="sm:w-48 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#001f3f]/10 focus:border-[#001f3f] transition-all outline-none text-sm text-slate-700"
+          >
+            <option value="">Todos los estados</option>
+            {STATUS_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
+          <HelpTip text="Filtra la lista por estado del proceso: Iniciado, En proceso o Cerrado." position="left" />
+        </div>
       </div>
 
       {error && (

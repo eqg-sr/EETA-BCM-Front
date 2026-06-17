@@ -3,6 +3,7 @@ import Layout from '../components/Layout';
 import api from '../services/api';
 import { AlertCircle, Search, UserPlus, UserMinus, Users, Link2, Loader2, ChevronDown, ChevronUp } from 'lucide-react';
 import { ROLE_LABELS, type Role } from '../context/AuthContext';
+import HelpTip from '../components/HelpTip';
 
 type AdminUser = {
   _id: string;
@@ -101,6 +102,7 @@ function UsuariosTab() {
             className="w-4 h-4 accent-[#001f3f]"
           />
           Mostrar solo pendientes de aprobación
+          <HelpTip text="Filtra para ver únicamente los usuarios que se registraron pero aún no fueron aprobados. Sin aprobación no pueden acceder al sistema." position="right" width="w-64" />
         </label>
         <span className="text-xs text-slate-400">{displayed.length} usuario{displayed.length !== 1 ? 's' : ''}</span>
       </div>
@@ -130,19 +132,22 @@ function UsuariosTab() {
                 <td className="px-4 py-3 font-medium text-slate-800">{u.name}</td>
                 <td className="px-4 py-3 text-slate-600 font-mono text-xs">{u.email}</td>
                 <td className="px-4 py-3">
-                  <select
-                    value={u.role}
-                    disabled={actionLoading[u._id]}
-                    onChange={(e) => cambiarRol(u._id, e.target.value as Role)}
-                    className="text-xs border border-slate-200 rounded-lg px-2 py-1 bg-white text-slate-700 focus:outline-none focus:border-[#001f3f]"
-                  >
-                    {ASSIGNABLE_ROLES.map((r) => (
-                      <option key={r} value={r}>{ROLE_LABELS[r]}</option>
-                    ))}
-                    {u.role === 'secretario' && (
-                      <option value="secretario">{ROLE_LABELS.secretario}</option>
-                    )}
-                  </select>
+                  <div className="flex items-center gap-1.5">
+                    <select
+                      value={u.role}
+                      disabled={actionLoading[u._id]}
+                      onChange={(e) => cambiarRol(u._id, e.target.value as Role)}
+                      className="text-xs border border-slate-200 rounded-lg px-2 py-1 bg-white text-slate-700 focus:outline-none focus:border-[#001f3f]"
+                    >
+                      {ASSIGNABLE_ROLES.map((r) => (
+                        <option key={r} value={r}>{ROLE_LABELS[r]}</option>
+                      ))}
+                      {u.role === 'secretario' && (
+                        <option value="secretario">{ROLE_LABELS.secretario}</option>
+                      )}
+                    </select>
+                    <HelpTip text="Actor y Demandado ven solo sus expedientes. Árbitro ve todos. Perito tiene acceso de solo lectura. Secretario tiene acceso total y administra el sistema." position="right" width="w-64" />
+                  </div>
                 </td>
                 <td className="px-4 py-3">
                   <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${u.activo ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'}`}>
@@ -190,15 +195,25 @@ function UsuariosTab() {
   );
 }
 
+const ACTION_HELP: Partial<Record<string, string>> = {
+  Aprobar:    'Habilita al usuario para acceder al sistema. Sin aprobación, no puede ingresar aunque haya completado el registro.',
+  Desactivar: 'Suspende temporalmente el acceso. El usuario no podrá iniciar sesión hasta ser reactivado.',
+  Activar:    'Restaura el acceso de un usuario previamente desactivado.',
+};
+
 function ActionBtn({ label, loading, className, onClick }: { label: string; loading?: boolean; className: string; onClick: () => void }) {
+  const help = ACTION_HELP[label];
   return (
-    <button
-      onClick={onClick}
-      disabled={loading}
-      className={`px-3 py-1 rounded-lg text-xs font-semibold transition-colors disabled:opacity-50 ${className}`}
-    >
-      {label}
-    </button>
+    <div className="flex items-center gap-1">
+      <button
+        onClick={onClick}
+        disabled={loading}
+        className={`px-3 py-1 rounded-lg text-xs font-semibold transition-colors disabled:opacity-50 ${className}`}
+      >
+        {label}
+      </button>
+      {help && <HelpTip text={help} position="top" />}
+    </div>
   );
 }
 
@@ -379,7 +394,10 @@ function AsignacionesTab() {
               ) : (
                 <>
                   <div className="relative">
-                    <p className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Agregar usuario</p>
+                    <p className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2 flex items-center gap-1.5">
+                      Agregar usuario
+                      <HelpTip text="Busca un usuario registrado y aprobado para asignarlo como parte en este expediente. Así podrá ver y operar en él según su rol." position="right" width="w-60" />
+                    </p>
                     <div className="relative">
                       <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                       <input
@@ -426,12 +444,15 @@ function AsignacionesTab() {
                               <span className="text-sm font-medium text-slate-800">{u.name}</span>
                               <span className="text-xs text-slate-400 ml-2">{ROLE_LABELS[u.role]}</span>
                             </div>
-                            <button
-                              onClick={() => quitarUsuario(selectedCausa.id, exp.nroExpediente, u._id)}
-                              className="flex items-center gap-1 px-2 py-1 text-xs font-semibold text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                            >
-                              <UserMinus size={13} /> Quitar
-                            </button>
+                            <div className="flex items-center gap-1">
+                              <button
+                                onClick={() => quitarUsuario(selectedCausa.id, exp.nroExpediente, u._id)}
+                                className="flex items-center gap-1 px-2 py-1 text-xs font-semibold text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                              >
+                                <UserMinus size={13} /> Quitar
+                              </button>
+                              <HelpTip text="Desvincula al usuario de este expediente. Dejará de tener acceso a él, pero su cuenta permanece activa en el sistema." position="left" width="w-56" />
+                            </div>
                           </div>
                         ))}
                       </div>

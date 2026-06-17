@@ -6,6 +6,7 @@ import StatusBadge from '../components/StatusBadge';
 import { useCausas, type Causa, type Movimiento, type NuevoMovimiento, type MovimientoTipo, type CausaStatus, type Sujeto, type SujetoVinculo, type CausaRelacionada } from '../context/CausasContext';
 import { useAuth, usePermissions } from '../context/AuthContext';
 import { useTour } from '../hooks/useTour';
+import HelpTip from '../components/HelpTip';
 import api from '../services/api';
 import { ARBITROS_TITULARES, ARBITROS_TITULARES_NOMBRES, SECRETARIO_TRIBUNAL } from '../constants/tribunal';
 
@@ -135,6 +136,7 @@ export default function CausaDetalle() {
                     <option key={o.value} value={o.value}>{o.label}</option>
                   ))}
                 </select>
+                <HelpTip text="Cambia el estado del expediente. Solo el secretario puede modificarlo. El flujo normal es: Pendiente → Iniciado → En proceso → Cerrado." position="bottom" width="w-64" />
                 {statusLoading && (
                   <div className="w-4 h-4 border-2 border-slate-200 border-t-[#001f3f] rounded-full animate-spin" />
                 )}
@@ -298,15 +300,18 @@ function ComposicionTribunalBlock({ causa, isSecretario }: { causa: Causa; isSec
               <input value={s1} onChange={(e) => setS1(e.target.value)} placeholder="Suplente 1 (opcional)" className="form-input text-sm" />
               <input value={s2} onChange={(e) => setS2(e.target.value)} placeholder="Suplente 2 (opcional)" className="form-input text-sm" />
               <input value={s3} onChange={(e) => setS3(e.target.value)} placeholder="Suplente 3 (opcional)" className="form-input text-sm" />
-              <button
-                type="button"
-                onClick={handleSave}
-                disabled={saving}
-                className="flex items-center gap-1.5 px-4 py-1.5 bg-[#001f3f] text-white rounded-lg text-xs font-bold hover:bg-[#002d5a] disabled:opacity-50 transition-all"
-              >
-                <Send size={12} />
-                {saving ? 'Guardando...' : saved ? '¡Guardado!' : 'Guardar suplentes'}
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleSave}
+                  disabled={saving}
+                  className="flex items-center gap-1.5 px-4 py-1.5 bg-[#001f3f] text-white rounded-lg text-xs font-bold hover:bg-[#002d5a] disabled:opacity-50 transition-all"
+                >
+                  <Send size={12} />
+                  {saving ? 'Guardando...' : saved ? '¡Guardado!' : 'Guardar suplentes'}
+                </button>
+                <HelpTip text="Guarda la designación de árbitros suplentes para este expediente. Los suplentes reemplazan a los titulares ante impedimento o excusación." position="right" />
+              </div>
             </div>
           ) : (
             <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-2 min-h-[60px]">
@@ -428,6 +433,7 @@ function SujetosBlock({
           <h3 className="text-xs font-bold uppercase tracking-wider text-[#001f3f] mb-3 flex items-center gap-2">
             <UserPlus size={14} className="text-blue-600" />
             Agregar Sujeto
+            <HelpTip text="Vincula un nuevo participante al expediente: una parte adicional (actor/demandado) o un tercero involucrado (perito, testigo, patrocinante)." position="right" width="w-64" />
           </h3>
           <form onSubmit={handleAgregar} className="space-y-3">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
@@ -571,6 +577,7 @@ function CausasRelacionadasBlock({
           <h3 className="text-xs font-bold uppercase tracking-wider text-[#001f3f] mb-3 flex items-center gap-2">
             <Link2 size={14} className="text-blue-600" />
             Vincular Causa Relacionada
+            <HelpTip text="Asocia otro expediente que esté relacionado con este proceso. Útil para causas conexas, acumuladas o que comparten partes." position="right" width="w-60" />
           </h3>
           <form onSubmit={handleAgregar} className="space-y-3">
             <input
@@ -907,17 +914,21 @@ function MovimientosBlock({
           <h3 className="text-xs font-bold uppercase tracking-wider text-[#001f3f] mb-3 flex items-center gap-2">
             <FilePlus size={14} className="text-blue-600" />
             Cargar Movimiento
+            <HelpTip text="Registra una nueva actuación procesal en el expediente. Quedará visible para todas las partes autorizadas." position="right" width="w-60" />
           </h3>
           <form onSubmit={handleCargarMovimiento} className="space-y-3">
-            <select
-              value={movTipo}
-              onChange={(e) => setMovTipo(e.target.value as MovimientoTipo)}
-              className="form-input text-sm w-full"
-            >
-              {(Object.keys(MOVIMIENTO_TIPO_LABELS) as MovimientoTipo[]).map((t) => (
-                <option key={t} value={t}>{MOVIMIENTO_TIPO_LABELS[t]}</option>
-              ))}
-            </select>
+            <div className="flex items-center gap-2">
+              <select
+                value={movTipo}
+                onChange={(e) => setMovTipo(e.target.value as MovimientoTipo)}
+                className="form-input text-sm w-full"
+              >
+                {(Object.keys(MOVIMIENTO_TIPO_LABELS) as MovimientoTipo[]).map((t) => (
+                  <option key={t} value={t}>{MOVIMIENTO_TIPO_LABELS[t]}</option>
+                ))}
+              </select>
+              <HelpTip text="Categoría de la actuación procesal: Resoluciones del tribunal (decretos, laudos), Presentaciones de partes (escritos, pericias) o Notificaciones (cédulas)." position="left" width="w-64" />
+            </div>
             <input
               value={movTitulo}
               onChange={(e) => setMovTitulo(e.target.value)}

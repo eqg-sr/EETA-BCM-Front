@@ -1,3 +1,7 @@
+/*
+ * Tour de bienvenida deshabilitado para esta release.
+ * Se conserva la implementación para reactivarla más adelante.
+ *
 import { Tour } from 'shepherd.js';
 import type { Role } from '../context/AuthContext';
 
@@ -202,3 +206,6 @@ export function useTour() {
 
   return { startTour, resetTour };
 }
+*/
+
+export {};

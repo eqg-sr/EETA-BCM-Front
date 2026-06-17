@@ -27,7 +27,7 @@ export default function Login() {
     try {
       const userData = await login(email.trim(), password);
       nav(DASHBOARD_ROLES.includes(userData.role) ? '/dashboard' : '/causas');
-      setTimeout(() => startTour(userData._id, userData.role), 500);
+      setTimeout(() => startTour(userData._id, userData.role, nav), 500);
     } catch (err) {
       if (axios.isAxiosError(err) && err.response?.status === 403) {
         setError(err.response.data?.message ?? 'Acceso denegado.');

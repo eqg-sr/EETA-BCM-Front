@@ -3,6 +3,7 @@ import type { Role } from '../context/AuthContext';
 
 const { Tour } = Shepherd;
 type TourInstance = InstanceType<typeof Tour>;
+type NavigateFn = (path: string) => void;
 
 const STORAGE_KEY = (userId: string) => `eeta_tour_completado_${userId}`;
 
@@ -13,17 +14,28 @@ const BTN_SECONDARY =
 const BTN_SKIP =
   'px-3 py-2 text-slate-400 text-xs font-medium hover:text-slate-600 transition-colors';
 
-function elExists(selector: string): boolean {
-  return !!document.querySelector(selector);
+function waitForElement(selector: string, timeoutMs = 3000): Promise<boolean> {
+  return new Promise((resolve) => {
+    if (document.querySelector(selector)) { resolve(true); return; }
+    const start = Date.now();
+    const poll = () => {
+      if (document.querySelector(selector)) { resolve(true); return; }
+      if (Date.now() - start > timeoutMs) { resolve(false); return; }
+      setTimeout(poll, 80);
+    };
+    setTimeout(poll, 80);
+  });
 }
 
 function makeStep(
   tour: TourInstance,
+  navigate: NavigateFn,
   opts: {
     id: string;
     title: string;
     text: string;
     attachTo?: { element: string; on: 'bottom' | 'top' | 'left' | 'right' | 'bottom-start' | 'bottom-end' };
+    navigateTo?: string;
     isLast?: boolean;
   }
 ) {
@@ -36,17 +48,15 @@ function makeStep(
     attachTo: opts.attachTo,
     scrollTo: true,
     cancelIcon: { enabled: true },
-    beforeShowPromise: opts.attachTo
-      ? () =>
-          new Promise<void>((resolve) => {
-            if (elExists(opts.attachTo!.element)) resolve();
-            else {
-              // elemento no montado → saltar paso
-              setTimeout(() => tour.next(), 0);
-              resolve();
-            }
-          })
-      : undefined,
+    beforeShowPromise: () =>
+      new Promise<void>(async (resolve) => {
+        if (opts.navigateTo) navigate(opts.navigateTo);
+        if (opts.attachTo) {
+          const found = await waitForElement(opts.attachTo.element);
+          if (!found) { setTimeout(() => tour.next(), 0); }
+        }
+        resolve();
+      }),
     buttons: [
       {
         text: 'Saltar tour',
@@ -65,7 +75,7 @@ function makeStep(
   });
 }
 
-function buildTour(role: Role): TourInstance {
+function buildTour(role: Role, navigate: NavigateFn): TourInstance {
   const tour = new Tour({
     useModalOverlay: true,
     defaultStepOptions: {
@@ -75,108 +85,196 @@ function buildTour(role: Role): TourInstance {
     },
   });
 
+  const s = (opts: Parameters<typeof makeStep>[2]) => makeStep(tour, navigate, opts);
+
   switch (role) {
     case 'secretario':
-      makeStep(tour, {
-        id: 'sec-1',
-        title: 'Panel de Expedientes',
-        text: 'Desde acá tenés acceso completo a todos los expedientes del tribunal. Podés filtrar por estado y buscar por carátula o número.',
-        attachTo: { element: '#tour-expedientes', on: 'bottom-start' },
+      s({
+        id: 'sec-bienvenida',
+        title: '¡Bienvenido/a al sistema!',
+        text: 'Este es el <strong>Expediente Electrónico del Tribunal Arbitral BCM</strong>. Te vamos a guiar por las funciones principales para que puedas empezar a trabajar enseguida.',
       });
-      makeStep(tour, {
-        id: 'sec-2',
+      s({
+        id: 'sec-stats',
+        title: 'Resumen del Tribunal',
+        text: 'Acá tenés un pantallazo rápido del estado del tribunal: total de expedientes y cuántos están iniciados, en proceso o cerrados. También ves cuántos usuarios tienen aprobación pendiente.',
+        attachTo: { element: '#tour-stats', on: 'bottom' },
+        navigateTo: '/dashboard',
+      });
+      s({
+        id: 'sec-graficos',
+        title: 'Estadísticas',
+        text: 'Estos gráficos te muestran la distribución de expedientes por estado y la cantidad de expedientes iniciados en los últimos meses. Muy útil para tener una visión general de la actividad del tribunal.',
+        attachTo: { element: '#tour-graficos', on: 'top' },
+      });
+      s({
+        id: 'sec-recientes',
+        title: 'Actividad Reciente',
+        text: 'Esta tabla muestra los expedientes con movimientos más recientes, con su estado actual. Podés hacer clic en cualquiera para abrirlo directamente.',
+        attachTo: { element: '#tour-recientes', on: 'top' },
+      });
+      s({
+        id: 'sec-expedientes',
+        title: 'Panel de Expedientes',
+        text: 'Acá encontrás <strong>todos los expedientes del tribunal</strong>. Podés ver el número de expediente electrónico, carátula, tribunal, árbitros asignados y la fecha del último movimiento.',
+        attachTo: { element: '#tour-expedientes', on: 'bottom-start' },
+        navigateTo: '/causas',
+      });
+      s({
+        id: 'sec-filtros',
+        title: 'Búsqueda y Filtros',
+        text: 'Usá el buscador para encontrar expedientes por carátula, número o tribunal. El selector de estado te permite ver solo los expedientes iniciados, en proceso o cerrados.',
+        attachTo: { element: '#tour-filtros', on: 'bottom' },
+      });
+      s({
+        id: 'sec-nuevo',
         title: 'Crear Expediente',
-        text: 'Iniciá un nuevo expediente cargando los datos de la demanda. Podés subir el PDF y el sistema completará algunos campos automáticamente.',
+        text: 'Como secretario/a podés iniciar nuevos expedientes. Completás los datos de la demanda y opcionalmente subís el PDF. El sistema genera el número de expediente electrónico automáticamente.',
         attachTo: { element: '#tour-nuevo-expediente', on: 'bottom-end' },
       });
-      makeStep(tour, {
-        id: 'sec-3',
-        title: 'Panel de Administración',
-        text: 'Desde acá aprobás nuevos usuarios, los asignás a expedientes y gestionás el acceso al sistema.',
+      s({
+        id: 'sec-admin',
+        title: 'Administración de Usuarios',
+        text: 'Desde el panel de administración aprobás los nuevos usuarios que se registran, los asignás como parte actora o demandada en expedientes, y podés gestionar sus accesos. Es la función más importante de tu rol.',
         attachTo: { element: '#tour-nav-admin', on: 'bottom' },
       });
-      makeStep(tour, {
-        id: 'sec-4',
-        title: 'Dashboard',
-        text: 'En el dashboard encontrás un resumen del estado general de los expedientes, estadísticas y movimientos recientes.',
-        attachTo: { element: '#tour-nav-dashboard', on: 'bottom' },
-      });
-      makeStep(tour, {
-        id: 'sec-5',
+      s({
+        id: 'sec-fin',
         title: '¡Todo listo!',
-        text: 'Sos el administrador del sistema. Tenés acceso total para gestionar expedientes, usuarios y movimientos. ¡Bienvenido/a!',
+        text: 'Ya conocés las funciones principales del sistema. Recordá que podés volver a este tutorial en cualquier momento desde el <strong>Centro de Ayuda</strong> en el pie de página. ¡Bienvenido/a al tribunal!',
         isLast: true,
       });
       break;
 
     case 'actor':
-      makeStep(tour, {
-        id: 'act-1',
-        title: 'Mis Expedientes',
-        text: 'Acá aparecen únicamente los expedientes donde sos parte actora. No verás expedientes de otros usuarios.',
-        attachTo: { element: '#tour-expedientes', on: 'bottom-start' },
+      s({
+        id: 'act-bienvenida',
+        title: '¡Bienvenido/a!',
+        text: 'Este es el <strong>Expediente Electrónico del Tribunal Arbitral BCM</strong>. Desde acá vas a poder gestionar tus expedientes como parte actora. Te mostramos cómo funciona.',
       });
-      makeStep(tour, {
-        id: 'act-2',
+      s({
+        id: 'act-expedientes',
+        title: 'Mis Expedientes',
+        text: 'En este panel aparecen <strong>únicamente los expedientes donde sos parte actora</strong>. No verás los expedientes de otros usuarios. Podés ver el estado de cada uno y el último movimiento registrado.',
+        attachTo: { element: '#tour-expedientes', on: 'bottom-start' },
+        navigateTo: '/causas',
+      });
+      s({
+        id: 'act-filtros',
+        title: 'Búsqueda y Filtros',
+        text: 'Si tenés muchos expedientes, usá el buscador para encontrarlos por carátula o número. El filtro de estado te permite ver solo los que están en proceso, iniciados o ya cerrados.',
+        attachTo: { element: '#tour-filtros', on: 'bottom' },
+      });
+      s({
+        id: 'act-nuevo',
         title: 'Iniciar un Expediente',
-        text: 'Podés iniciar un nuevo expediente subiendo el PDF de la demanda. El sistema intentará completar los datos automáticamente.',
+        text: 'Desde acá podés iniciar un nuevo expediente. Completás los datos de la demanda, subís el PDF y el sistema completa algunos campos automáticamente. Una vez creado, el secretario del tribunal lo recibirá para su tramitación.',
         attachTo: { element: '#tour-nuevo-expediente', on: 'bottom-end' },
       });
-      makeStep(tour, {
-        id: 'act-3',
-        title: 'Consultá tus expedientes',
-        text: 'Haciendo clic en cualquier expediente podés ver su estado, los movimientos registrados y los documentos adjuntos. ¡Bienvenido/a!',
+      s({
+        id: 'act-detalle',
+        title: 'Detalle del Expediente',
+        text: 'Haciendo clic en <strong>Abrir</strong> en cualquier expediente podés ver toda la información: estado, composición del tribunal, sujetos involucrados, movimientos registrados y documentación adjunta.',
         isLast: true,
       });
       break;
 
     case 'arbitro':
-      makeStep(tour, {
-        id: 'arb-1',
-        title: 'Expedientes del Tribunal',
-        text: 'Como árbitro tenés visibilidad sobre todos los expedientes del tribunal, no solo los que te fueron asignados.',
+      s({
+        id: 'arb-bienvenida',
+        title: '¡Bienvenido/a, Árbitro!',
+        text: 'Este es el <strong>Expediente Electrónico del Tribunal Arbitral BCM</strong>. Como árbitro tenés acceso a todos los expedientes del tribunal. Te mostramos las funciones disponibles.',
+      });
+      s({
+        id: 'arb-stats',
+        title: 'Dashboard del Tribunal',
+        text: 'El dashboard te muestra el estado general del tribunal: cuántos expedientes hay en total y cómo se distribuyen por estado. Es tu punto de partida para tener una visión global.',
+        attachTo: { element: '#tour-stats', on: 'bottom' },
+        navigateTo: '/dashboard',
+      });
+      s({
+        id: 'arb-graficos',
+        title: 'Evolución del Tribunal',
+        text: 'Estos gráficos muestran la distribución de expedientes por estado y la actividad de los últimos meses. Te permiten seguir la evolución del trabajo del tribunal.',
+        attachTo: { element: '#tour-graficos', on: 'top' },
+      });
+      s({
+        id: 'arb-recientes',
+        title: 'Expedientes Recientes',
+        text: 'Acá ves los expedientes con actividad más reciente. Hacé clic en cualquiera para acceder directamente al detalle.',
+        attachTo: { element: '#tour-recientes', on: 'top' },
+      });
+      s({
+        id: 'arb-expedientes',
+        title: 'Todos los Expedientes',
+        text: 'Como árbitro tenés <strong>visibilidad sobre todos los expedientes del tribunal</strong>, no solo los asignados a vos. Podés consultar el estado, los movimientos y la documentación de cada uno.',
         attachTo: { element: '#tour-expedientes', on: 'bottom-start' },
+        navigateTo: '/causas',
       });
-      makeStep(tour, {
-        id: 'arb-2',
-        title: 'Panel de resumen',
-        text: 'Desde el dashboard podés ver un resumen del estado general de los expedientes.',
-        attachTo: { element: '#tour-nav-dashboard', on: 'bottom' },
+      s({
+        id: 'arb-filtros',
+        title: 'Búsqueda y Filtros',
+        text: 'Usá el buscador y los filtros para encontrar rápidamente los expedientes que necesitás consultar.',
+        attachTo: { element: '#tour-filtros', on: 'bottom' },
       });
-      makeStep(tour, {
-        id: 'arb-3',
-        title: 'Tu rol como Árbitro',
-        text: 'Podés cargar movimientos en los expedientes y consultar toda la documentación. ¡Bienvenido/a!',
+      s({
+        id: 'arb-fin',
+        title: '¡Todo listo!',
+        text: 'Ya conocés el sistema. Podés consultar expedientes, revisar movimientos y documentación. Recordá que podés repetir este tutorial desde el <strong>Centro de Ayuda</strong>. ¡Bienvenido/a!',
         isLast: true,
       });
       break;
 
     case 'demandado':
-      makeStep(tour, {
-        id: 'dem-1',
-        title: 'Mis Expedientes',
-        text: 'Acá aparecen únicamente los expedientes en los que figurás como demandado.',
-        attachTo: { element: '#tour-expedientes', on: 'bottom-start' },
+      s({
+        id: 'dem-bienvenida',
+        title: '¡Bienvenido/a!',
+        text: 'Este es el <strong>Expediente Electrónico del Tribunal Arbitral BCM</strong>. Desde acá podés consultar el estado de los expedientes en los que figurás como demandado.',
       });
-      makeStep(tour, {
-        id: 'dem-2',
-        title: 'Consultá el estado de tu caso',
-        text: 'Podés hacer clic en cualquier expediente para ver los movimientos registrados y los documentos del proceso. ¡Bienvenido/a!',
+      s({
+        id: 'dem-expedientes',
+        title: 'Mis Expedientes',
+        text: 'En este panel aparecen <strong>únicamente los expedientes en los que figurás como demandado</strong>. Podés ver el estado actual y la fecha del último movimiento de cada uno.',
+        attachTo: { element: '#tour-expedientes', on: 'bottom-start' },
+        navigateTo: '/causas',
+      });
+      s({
+        id: 'dem-filtros',
+        title: 'Búsqueda y Filtros',
+        text: 'Si tenés varios expedientes, usá el buscador para encontrar uno específico, o filtrá por estado para ver solo los que están activos.',
+        attachTo: { element: '#tour-filtros', on: 'bottom' },
+      });
+      s({
+        id: 'dem-detalle',
+        title: 'Consultá tu Expediente',
+        text: 'Haciendo clic en <strong>Abrir</strong> podés ver el detalle completo: composición del tribunal, sujetos del proceso, todos los movimientos registrados y los documentos adjuntos. Recordá que podés volver a este tutorial desde el <strong>Centro de Ayuda</strong>.',
         isLast: true,
       });
       break;
 
     case 'perito':
-      makeStep(tour, {
-        id: 'per-1',
-        title: 'Expedientes disponibles',
-        text: 'Como perito tenés acceso de consulta a todos los expedientes del tribunal.',
-        attachTo: { element: '#tour-expedientes', on: 'bottom-start' },
+      s({
+        id: 'per-bienvenida',
+        title: '¡Bienvenido/a, Perito!',
+        text: 'Este es el <strong>Expediente Electrónico del Tribunal Arbitral BCM</strong>. Como perito tenés acceso de consulta a los expedientes del tribunal.',
       });
-      makeStep(tour, {
-        id: 'per-2',
-        title: 'Acceso de solo lectura',
-        text: 'Podés consultar expedientes, movimientos y documentos, pero no realizar modificaciones en el sistema. ¡Bienvenido/a!',
+      s({
+        id: 'per-expedientes',
+        title: 'Expedientes Disponibles',
+        text: 'Desde acá podés ver los expedientes del tribunal disponibles para consulta. Podés buscar por carátula, número o filtrar por estado.',
+        attachTo: { element: '#tour-expedientes', on: 'bottom-start' },
+        navigateTo: '/causas',
+      });
+      s({
+        id: 'per-filtros',
+        title: 'Búsqueda y Filtros',
+        text: 'Usá el buscador y los filtros para localizar rápidamente el expediente que necesitás consultar.',
+        attachTo: { element: '#tour-filtros', on: 'bottom' },
+      });
+      s({
+        id: 'per-fin',
+        title: 'Acceso de Consulta',
+        text: 'Podés consultar toda la información de cada expediente: movimientos, documentación y composición del tribunal. Tu rol es de <strong>solo lectura</strong>: no podés crear ni modificar expedientes. Recordá que podés volver a este tutorial desde el <strong>Centro de Ayuda</strong>. ¡Bienvenido/a!',
         isLast: true,
       });
       break;
@@ -189,9 +287,9 @@ function buildTour(role: Role): TourInstance {
 }
 
 export function useTour() {
-  function startTour(userId: string, role: Role) {
+  function startTour(userId: string, role: Role, navigate: NavigateFn) {
     if (localStorage.getItem(STORAGE_KEY(userId))) return;
-    const tour = buildTour(role);
+    const tour = buildTour(role, navigate);
     if (tour.steps.length > 0) {
       tour.on('complete', () => localStorage.setItem(STORAGE_KEY(userId), 'true'));
       tour.on('cancel',   () => localStorage.setItem(STORAGE_KEY(userId), 'true'));
@@ -199,9 +297,9 @@ export function useTour() {
     }
   }
 
-  function resetAndStartTour(userId: string, role: Role) {
+  function resetAndStartTour(userId: string, role: Role, navigate: NavigateFn) {
     localStorage.removeItem(STORAGE_KEY(userId));
-    const tour = buildTour(role);
+    const tour = buildTour(role, navigate);
     if (tour.steps.length > 0) {
       tour.on('complete', () => localStorage.setItem(STORAGE_KEY(userId), 'true'));
       tour.on('cancel',   () => localStorage.setItem(STORAGE_KEY(userId), 'true'));

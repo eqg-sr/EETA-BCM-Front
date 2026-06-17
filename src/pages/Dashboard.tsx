@@ -167,7 +167,7 @@ export default function Dashboard() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mb-8">
+      <div id="tour-stats" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mb-8">
         <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
           <div className="flex items-center gap-2 text-slate-400 mb-2">
             <FolderOpen size={16} />
@@ -206,7 +206,7 @@ export default function Dashboard() {
         )}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-8">
+      <div id="tour-graficos" className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-8">
         <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
           <div className="flex items-center gap-2 text-[#001f3f] mb-4">
             <PieChartIcon size={18} className="text-blue-600" />
@@ -242,7 +242,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <div>
+      <div id="tour-recientes">
         <div className="flex items-center gap-2 text-[#001f3f] mb-4">
           <Clock size={18} className="text-blue-600" />
           <h2 className="font-bold uppercase tracking-wider text-xs">Expedientes recientes</h2>

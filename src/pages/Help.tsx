@@ -91,10 +91,7 @@ export default function HelpCenter() {
 
         {user && (
           <button
-            onClick={() => {
-              resetAndStartTour(user._id, user.role);
-              navigate(user.role === 'secretario' || user.role === 'arbitro' ? '/dashboard' : '/causas');
-            }}
+            onClick={() => resetAndStartTour(user._id, user.role, navigate)}
             className="mt-3 w-full flex items-center justify-center gap-2 py-2.5 px-3 bg-blue-50 text-blue-700 text-[11px] font-bold rounded-lg border border-blue-200 hover:bg-blue-100 transition-all"
           >
             <PlayCircle size={14} />

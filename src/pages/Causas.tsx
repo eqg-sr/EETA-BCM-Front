@@ -92,7 +92,7 @@ export default function Causas() {
         </div>
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-3 mb-6">
+      <div id="tour-filtros" className="flex flex-col sm:flex-row gap-3 mb-6">
         <div className="relative flex-1">
           <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
           <input

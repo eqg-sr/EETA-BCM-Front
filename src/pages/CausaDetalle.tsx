@@ -65,7 +65,12 @@ export default function CausaDetalle() {
   }
 
   const causa = currentCausa;
-  const allMovimientos = causa.expedientes.flatMap((e) => e.movimientos);
+  const allMovimientos: MovimientoFila[] = causa.expedientes.flatMap((e) =>
+    (e.movimientos ?? []).map((m) => ({
+      ...m,
+      expedienteNro: e.nroExpediente,
+    }))
+  );
 
   const handleStatusChange = async (newStatus: CausaStatus) => {
     if (!id) return;
@@ -726,6 +731,7 @@ function isRecent(iso: string) {
 
 const DESCRIPCION_MAX = 2000;
 const MOV_ARCHIVO_MAX_SIZE = 20 * 1024 * 1024;
+type MovimientoFila = Movimiento & { expedienteNro: string };
 
 function MovimientosBlock({
   causaId,
@@ -733,7 +739,7 @@ function MovimientosBlock({
   sujetos,
 }: {
   causaId: string;
-  movimientos: Movimiento[];
+  movimientos: MovimientoFila[];
   sujetos: Sujeto[];
 }) {
   const { currentCausa, agregarMovimiento, actualizarMovimiento, eliminarMovimiento, agregarExpediente } = useCausas();
@@ -758,7 +764,7 @@ function MovimientosBlock({
   const [categoriaFiltro, setCategoriaFiltro] = useState<MovimientoCategoria | 'Todas'>('Todas');
   const [expandedId, setExpandedId]       = useState<string | null>(null);
   const [deletingMovId, setDeletingMovId] = useState<string | null>(null);
-  const [modalMov, setModalMov]           = useState<Movimiento | null>(null);
+  const [modalMov, setModalMov]           = useState<MovimientoFila | null>(null);
   const [editTitulo, setEditTitulo]       = useState('');
   const [editDescripcion, setEditDescripcion] = useState('');
   const [editTipo, setEditTipo]           = useState<MovimientoTipo>('DEMANDA_ACTUACION');
@@ -826,7 +832,7 @@ function MovimientosBlock({
     }
   };
 
-  const openModal = (m: Movimiento) => {
+  const openModal = (m: MovimientoFila) => {
     setModalMov(m);
     setEditTitulo(m.titulo);
     setEditDescripcion(m.descripcion ?? '');
@@ -842,7 +848,7 @@ function MovimientosBlock({
     setEditSaving(true);
     setEditError(null);
     try {
-      await actualizarMovimiento(causaId, expediente.nroExpediente, modalMov.id, {
+      await actualizarMovimiento(causaId, modalMov.expedienteNro, modalMov.id, {
         tipo:         editTipo,
         titulo:       editTitulo.trim(),
         descripcion:  editDescripcion.trim() || undefined,
@@ -856,11 +862,12 @@ function MovimientosBlock({
     }
   };
 
-  const handleEliminarMovimiento = async (m: Movimiento) => {
-    if (!expediente || !confirm(`¿Eliminar el movimiento "${m.titulo}"?`)) return;
+  const handleEliminarMovimiento = async (m: MovimientoFila) => {
+    const expNro = 'expedienteNro' in m ? m.expedienteNro : expediente?.nroExpediente;
+    if (!expNro || !confirm(`¿Eliminar el movimiento "${m.titulo}"?`)) return;
     setDeletingMovId(m.id);
     try {
-      await eliminarMovimiento(causaId, expediente.nroExpediente, m.id);
+      await eliminarMovimiento(causaId, expNro, m.id);
     } catch {
       alert('No se pudo eliminar el movimiento.');
     } finally {
@@ -868,11 +875,12 @@ function MovimientosBlock({
     }
   };
 
-  const handleDescargarMovimiento = async (m: Movimiento) => {
-    if (!expediente) return;
+  const handleDescargarMovimiento = async (m: MovimientoFila) => {
+    const expNro = 'expedienteNro' in m ? m.expedienteNro : expediente?.nroExpediente;
+    if (!expNro) return;
     try {
       const response = await api.get(
-        `/causas/${causaId}/expedientes/${expediente.nroExpediente}/movimientos/${m.id}/archivo`,
+        `/causas/${causaId}/expedientes/${expNro}/movimientos/${m.id}/archivo`,
         { responseType: 'blob' }
       );
       const url = URL.createObjectURL(response.data);
@@ -1058,6 +1066,17 @@ function MovimientosBlock({
                           {m.descripcion}
                         </div>
                       )}
+                      {!esSecretario && expanded && m.nombreArchivo && (
+                        <div className="mt-2">
+                          <button
+                            onClick={() => handleDescargarMovimiento(m)}
+                            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-slate-200 bg-white text-[11px] text-slate-700 hover:border-slate-400 transition-colors"
+                          >
+                            <Download size={11} className="text-slate-500" />
+                            <span className="max-w-[150px] truncate">{m.nombreArchivo}</span>
+                          </button>
+                        </div>
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold ${CATEGORIA_BADGE[cat]}`}>
@@ -1090,14 +1109,15 @@ function MovimientosBlock({
                           <ChevronDown size={16} />
                         </button>
                       ) : (
-                        m.descripcion && m.descripcion.length > 80 && (
+                        (m.descripcion && m.descripcion.length > 80) || m.nombreArchivo ? (
                           <button
                             onClick={() => setExpandedId(expanded ? null : m.id)}
                             className="p-1 text-slate-400 hover:text-slate-600 transition-colors"
+                            title="Ver detalle"
                           >
                             <ChevronDown size={16} className={`transition-transform ${expanded ? 'rotate-180' : ''}`} />
                           </button>
-                        )
+                        ) : null
                       )}
                     </td>
                   </tr>

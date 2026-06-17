@@ -47,13 +47,19 @@ function makeStep(
     title: opts.title,
     text: opts.text,
     attachTo: opts.attachTo,
-    scrollTo: true,
+    scrollTo: { behavior: 'smooth', block: 'center' },
     cancelIcon: { enabled: true },
     beforeShowPromise: () =>
       new Promise<void>(async (resolve) => {
-        if (opts.navigateTo && navigate) navigate(opts.navigateTo);
+        if (opts.navigateTo && navigate) {
+          // Solo navega si no estamos ya en esa ruta (evita re-renders que rompen el flujo)
+          if (window.location.pathname !== opts.navigateTo) {
+            navigate(opts.navigateTo);
+            await new Promise(r => setTimeout(r, 300));
+          }
+        }
         if (opts.attachTo) {
-          const found = await waitForElement(opts.attachTo.element);
+          const found = await waitForElement(opts.attachTo.element, 4000);
           if (!found) { setTimeout(() => tour.next(), 0); }
         }
         resolve();
@@ -108,21 +114,21 @@ function addDetallePasos(tour: TourInstance, navigate: NavigateFn | null, role: 
     id: 'det-info',
     title: 'Información General',
     text: 'Acá están los datos principales: número de expediente electrónico, carátula, tribunal, fechas y el PDF de la demanda adjunto para descargar.',
-    attachTo: { element: '#info', on: 'top' },
+    attachTo: { element: '#tour-det-info', on: 'bottom' },
   });
   s({
     id: 'det-tribunal',
     title: 'Composición del Tribunal',
     text: 'Muestra los árbitros titulares (fijos para todos los expedientes), los árbitros suplentes designados y el secretario del tribunal.' +
       (role === 'secretario' ? ' Como secretario/a podés modificar los árbitros suplentes desde acá.' : ''),
-    attachTo: { element: '#tribunal', on: 'top' },
+    attachTo: { element: '#tour-det-tribunal', on: 'bottom' },
   });
   s({
     id: 'det-sujetos',
     title: 'Sujetos Involucrados',
     text: 'Lista de todos los involucrados en el proceso: actores, demandados y terceros. Se muestra nombre, CUIT, patrocinante y domicilio electrónico de cada uno.' +
       (role === 'secretario' ? ' Podés agregar nuevos sujetos desde el formulario al pie.' : ''),
-    attachTo: { element: '#sujetos', on: 'top' },
+    attachTo: { element: '#tour-det-sujetos', on: 'bottom' },
   });
   s({
     id: 'det-movimientos',
@@ -131,14 +137,14 @@ function addDetallePasos(tour: TourInstance, navigate: NavigateFn | null, role: 
       (role === 'secretario' || role === 'arbitro'
         ? ' Tenés habilitado el formulario para cargar nuevos movimientos con o sin archivo adjunto.'
         : ''),
-    attachTo: { element: '#movimientos', on: 'top' },
+    attachTo: { element: '#tour-det-movimientos', on: 'bottom' },
   });
   s({
     id: 'det-relacionadas',
     title: 'Causas Relacionadas',
     text: 'Si el expediente está vinculado a otros procesos, aparecen acá con su número, descripción de la vinculación y documentos adjuntos.' +
       (role === 'secretario' ? ' Como secretario/a podés vincular y desvincular causas.' : ''),
-    attachTo: { element: '#relacionadas', on: 'top' },
+    attachTo: { element: '#tour-det-relacionadas', on: 'bottom' },
   });
 }
 
@@ -186,7 +192,7 @@ function addPasoFinal(tour: TourInstance, navigate: NavigateFn | null, navigateT
   makeStep(tour, navigate, {
     id: 'fin-soporte',
     title: '¡Ya conocés el sistema!',
-    text: 'Si tenés dudas o necesitás ayuda, contactate con el equipo de soporte IT. Y si querés volver a ver este tutorial en cualquier momento, hacé clic en el enlace de <strong>Soporte</strong> que está aquí abajo en el pie de página.',
+    text: 'Si tenés dudas o necesitás ayuda, contactate con el equipo de soporte IT. Y si querés <strong>volver a ver este tutorial</strong> en cualquier momento, hacé clic en el enlace <strong>Soporte</strong> que está aquí abajo en el pie de la página.',
     attachTo: { element: '#tour-soporte', on: 'top' },
     navigateTo,
     isLast: true,
@@ -244,7 +250,6 @@ function buildMainTour(role: Role, navigate: NavigateFn): TourInstance {
         title: 'Administración de Usuarios',
         text: 'Desde el panel de administración aprobás nuevos usuarios que se registran, los asignás como parte actora o demandada en expedientes, y gestionás sus accesos. Es la función más importante de tu rol.',
         attachTo: { element: '#tour-nav-admin', on: 'bottom' },
-        navigateTo: '/causas',
       });
       addPasoFinal(tour, navigate, '/causas');
       break;

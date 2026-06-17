@@ -169,7 +169,7 @@ export default function CausaDetalle() {
         </aside>
 
         <div className="lg:col-span-10 space-y-8">
-          <Section id="info" title="Información General" icon={Info}>
+          <Section id="info" tourId="tour-det-info" title="Información General" icon={Info}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <InfoRow label="N° de Expediente"     value={causa.nroExpedienteElectronico || causa.numeroInterno} />
               <InfoRow label="Demanda"               value={causa.caratula} />
@@ -193,11 +193,11 @@ export default function CausaDetalle() {
             </div>
           </Section>
 
-          <Section id="tribunal" title="Composición del Tribunal" icon={Gavel}>
+          <Section id="tribunal" tourId="tour-det-tribunal" title="Composición del Tribunal" icon={Gavel}>
             <ComposicionTribunalBlock causa={causa} isSecretario={isSecretario} />
           </Section>
 
-          <Section id="sujetos" title="Sujetos" icon={Users}>
+          <Section id="sujetos" tourId="tour-det-sujetos" title="Sujetos" icon={Users}>
             <SujetosBlock
               causaId={causa.id}
               sujetos={causa.sujetos}
@@ -205,11 +205,11 @@ export default function CausaDetalle() {
             />
           </Section>
 
-          <Section id="movimientos" title="Movimientos" icon={ListOrdered}>
+          <Section id="movimientos" tourId="tour-det-movimientos" title="Movimientos" icon={ListOrdered}>
             <MovimientosBlock causaId={causa.id} movimientos={allMovimientos} sujetos={causa.sujetos} />
           </Section>
 
-          <Section id="relacionadas" title="Causas Relacionadas" icon={Link2}>
+          <Section id="relacionadas" tourId="tour-det-relacionadas" title="Causas Relacionadas" icon={Link2}>
             <CausasRelacionadasBlock
               causaId={causa.id}
               relacionadas={causa.causasRelacionadas}
@@ -225,13 +225,13 @@ export default function CausaDetalle() {
 // ── Sub-components ─────────────────────────────────────────────────────────────
 
 function Section({
-  id, title, icon: Icon, children,
+  id, title, icon: Icon, children, tourId,
 }: {
-  id: string; title: string; icon: typeof Info; children: React.ReactNode;
+  id: string; title: string; icon: typeof Info; children: React.ReactNode; tourId?: string;
 }) {
   return (
     <section id={id} className="bg-white rounded-2xl border border-slate-200 shadow-sm scroll-mt-24">
-      <div className="flex items-center gap-2 px-6 pt-5 pb-3 border-b border-slate-100">
+      <div id={tourId} className="flex items-center gap-2 px-6 pt-5 pb-3 border-b border-slate-100">
         <Icon size={18} className="text-blue-600" />
         <h2 className="font-bold uppercase tracking-wider text-xs text-[#001f3f]">{title}</h2>
       </div>

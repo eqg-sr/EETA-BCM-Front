@@ -1,18 +1,12 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft, FilePlus, Send, Upload, Info, Users, ListOrdered, Link2, Download, Trash2, UserPlus, FileText, Gavel, Search, ChevronDown } from 'lucide-react';
-
-const ARBITROS_TITULARES = [
-  { nombre: 'Pedro Alvaro Pérez Catón',  matricula: '(pendiente)' }, // TODO: completar matrícula
-  { nombre: 'Pablo Javier Olaiz',        matricula: '(pendiente)' }, // TODO: completar matrícula
-  { nombre: 'Federico Pithod',           matricula: '(pendiente)' }, // TODO: completar matrícula
-];
-const SECRETARIO_TRIBUNAL = { nombre: 'Santiago María Cardozo', matricula: '(pendiente)' }; // TODO: completar matrícula
 import Layout from '../components/Layout';
 import StatusBadge from '../components/StatusBadge';
 import { useCausas, type Causa, type Movimiento, type NuevoMovimiento, type MovimientoTipo, type CausaStatus, type Sujeto, type SujetoVinculo, type CausaRelacionada } from '../context/CausasContext';
 import { useAuth, usePermissions } from '../context/AuthContext';
 import api from '../services/api';
+import { ARBITROS_TITULARES, ARBITROS_TITULARES_NOMBRES, SECRETARIO_TRIBUNAL } from '../constants/tribunal';
 
 const SECTIONS = [
   { id: 'info',       label: 'Información General',   icon: Info },
@@ -256,7 +250,8 @@ function ComposicionTribunalBlock({ causa, isSecretario }: { causa: Causa; isSec
     setSaved(false);
     try {
       await actualizarCausa(causa.id, {
-        arbitrosSuplentes: [s1, s2, s3].filter(Boolean),
+        arbitros: ARBITROS_TITULARES_NOMBRES,
+        arbitrosSuplentes: [s1, s2, s3].map((s) => s.trim()).filter(Boolean),
       });
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);

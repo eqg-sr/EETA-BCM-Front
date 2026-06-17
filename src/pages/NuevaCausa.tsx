@@ -5,13 +5,7 @@ import Layout from '../components/Layout';
 import { useCausas, type Sujeto } from '../context/CausasContext';
 import { usePermissions } from '../context/AuthContext';
 import api from '../services/api';
-
-const ARBITROS_TITULARES = [
-  { nombre: 'Pedro Alvaro Pérez Catón',  matricula: '(pendiente)' }, // TODO: completar matrícula
-  { nombre: 'Pablo Javier Olaiz',        matricula: '(pendiente)' }, // TODO: completar matrícula
-  { nombre: 'Federico Pithod',           matricula: '(pendiente)' }, // TODO: completar matrícula
-];
-const SECRETARIO_TRIBUNAL = { nombre: 'Santiago María Cardozo', matricula: '(pendiente)' }; // TODO: completar matrícula
+import { ARBITROS_TITULARES, ARBITROS_TITULARES_NOMBRES, SECRETARIO_TRIBUNAL } from '../constants/tribunal';
 
 export default function NuevaCausa() {
   const navigate = useNavigate();
@@ -92,8 +86,8 @@ export default function NuevaCausa() {
         id:                `CAU-${Date.now()}`,
         caratula,
         nroExpedienteElectronico: nroExpedienteElectronico || undefined,
-        arbitros:          [],
-        arbitrosSuplentes: [suplente1, suplente2, suplente3].filter(Boolean),
+        arbitros:          ARBITROS_TITULARES_NOMBRES,
+        arbitrosSuplentes: [suplente1, suplente2, suplente3].map((s) => s.trim()).filter(Boolean),
         fechaPresentacion: fechaInicio,
         fechaInicio,
         ultimoMovimiento:  fechaInicio,

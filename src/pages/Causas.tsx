@@ -5,6 +5,7 @@ import Layout from '../components/Layout';
 import { useCausas, type Causa, type CausaStatus } from '../context/CausasContext';
 import { usePermissions } from '../context/AuthContext';
 import api from '../services/api';
+import { ARBITROS_TITULARES_NOMBRES } from '../constants/tribunal';
 
 const STATUS_OPTIONS: { value: CausaStatus; label: string }[] = [
   { value: 'iniciado',   label: 'Iniciado' },
@@ -58,6 +59,9 @@ export default function Causas() {
       alert('No se pudo descargar el archivo.');
     }
   };
+
+  const getArbitrosTitulares = (causa: Causa) =>
+    causa.arbitros && causa.arbitros.length > 0 ? causa.arbitros : ARBITROS_TITULARES_NOMBRES;
 
   return (
     <Layout>
@@ -146,14 +150,21 @@ export default function Causas() {
                     </td>
                     <td className="px-4 py-3 text-slate-600 text-xs">{c.tribunal}</td>
                     <td className="px-4 py-3 text-slate-600 text-xs">
-                      {c.arbitros && c.arbitros.length > 0 ? (
-                        <>
-                          {c.arbitros[0]}
-                          {c.arbitros.length > 1 && (
-                            <span className="text-slate-400"> +{c.arbitros.length - 1} más</span>
-                          )}
-                        </>
-                      ) : '-'}
+                      <div className="space-y-1">
+                        {getArbitrosTitulares(c).map((arbitro) => (
+                          <div key={`titular-${arbitro}`} className="font-medium text-slate-700">
+                            {arbitro}
+                          </div>
+                        ))}
+                        {(c.arbitrosSuplentes ?? []).map((arbitro) => (
+                          <div key={`suplente-${arbitro}`} className="text-slate-500">
+                            {arbitro}
+                            <span className="ml-1 rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+                              Suplente
+                            </span>
+                          </div>
+                        ))}
+                      </div>
                     </td>
                     <td className="px-4 py-3 text-slate-500 text-xs">{c.ultimoMovimiento}</td>
                     <td className="px-4 py-3">

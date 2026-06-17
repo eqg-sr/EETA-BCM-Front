@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
 import type { Role } from '../context/AuthContext';
+import { useTour } from '../hooks/useTour';
 
 const DASHBOARD_ROLES: Role[] = ['secretario', 'arbitro'];
 import { Eye, EyeOff, AlertCircle } from 'lucide-react';
@@ -11,6 +12,7 @@ import axios from 'axios';
 export default function Login() {
   const { login } = useAuth();
   const nav = useNavigate();
+  const { startTour } = useTour();
 
   const [email, setEmail]           = useState('');
   const [password, setPassword]     = useState('');
@@ -25,6 +27,7 @@ export default function Login() {
     try {
       const role = await login(email.trim(), password);
       nav(DASHBOARD_ROLES.includes(role) ? '/dashboard' : '/causas');
+      setTimeout(() => startTour(role), 500);
     } catch (err) {
       if (axios.isAxiosError(err) && err.response?.status === 403) {
         setError(err.response.data?.message ?? 'Acceso denegado.');

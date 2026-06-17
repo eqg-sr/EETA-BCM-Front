@@ -38,6 +38,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             <nav className="flex items-center gap-1 ml-4">
               {(user.role === 'secretario' || user.role === 'arbitro') && (
                 <Link
+                  id="tour-nav-dashboard"
                   to="/dashboard"
                   className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
                     isActive('/dashboard') ? 'bg-white/15 text-white' : 'text-white/70 hover:bg-white/10 hover:text-white'
@@ -58,6 +59,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               </Link>
               {user.role === 'secretario' && (
                 <Link
+                  id="tour-nav-admin"
                   to="/admin"
                   className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
                     isActive('/admin') ? 'bg-white/15 text-white' : 'text-white/70 hover:bg-white/10 hover:text-white'

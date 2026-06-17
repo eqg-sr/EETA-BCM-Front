@@ -63,7 +63,7 @@ export default function Causas() {
     <Layout>
       <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
         <div>
-          <div className="flex items-center gap-2 text-[#001f3f] mb-1">
+          <div id="tour-expedientes" className="flex items-center gap-2 text-[#001f3f] mb-1">
             <FolderOpen size={24} strokeWidth={2.5} />
             <h1 className="text-2xl font-extrabold tracking-tight text-slate-900">
               Expedientes
@@ -77,6 +77,7 @@ export default function Causas() {
         <div className="flex items-center gap-3">
           {canCreateCausa && (
             <Link
+              id="tour-nuevo-expediente"
               to="/causas/new"
               className="flex items-center gap-2 px-5 py-2.5 bg-[#001f3f] text-white rounded-xl hover:bg-[#002d5a] transition-all shadow-lg shadow-blue-900/20 text-sm font-bold active:scale-95"
             >

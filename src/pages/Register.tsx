@@ -10,6 +10,7 @@ const ROLES = [
   { value: 'demandado', label: 'Demandado' },
   { value: 'perito',    label: 'Perito' },
   { value: 'arbitro',   label: 'Árbitro' },
+  { value: 'otros',     label: 'Otros' },
 ] as const;
 
 export default function Register() {

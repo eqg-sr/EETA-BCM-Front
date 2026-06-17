@@ -18,7 +18,6 @@ type CausaResumen = {
 };
 
 const STATUS_OPTIONS: { value: CausaStatus; label: string }[] = [
-  { value: 'pendiente',  label: 'Pendiente' },
   { value: 'iniciado',   label: 'Iniciado' },
   { value: 'en_proceso', label: 'En proceso' },
   { value: 'cerrado',    label: 'Cerrado' },

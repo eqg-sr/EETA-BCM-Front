@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import api from '../services/api';
 
-export type Role = 'arbitro' | 'demandado' | 'actor' | 'secretario' | 'perito';
+export type Role = 'arbitro' | 'demandado' | 'actor' | 'secretario' | 'perito' | 'otros';
 
 export type User = {
   _id: string;
@@ -77,6 +77,7 @@ export const ROLE_LABELS: Record<Role, string> = {
   actor:      'Actor',
   secretario: 'Secretario/a del Tribunal',
   perito:     'Perito',
+  otros:      'Otros',
 };
 
 export function usePermissions() {

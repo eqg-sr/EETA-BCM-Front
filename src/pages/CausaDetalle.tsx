@@ -741,7 +741,7 @@ function MovimientosBlock({
   movimientos: Movimiento[];
   sujetos: Sujeto[];
 }) {
-  const { currentCausa, agregarMovimiento, agregarExpediente } = useCausas();
+  const { currentCausa, agregarMovimiento, eliminarMovimiento, agregarExpediente } = useCausas();
   const { user } = useAuth();
 
   const expediente = currentCausa?.expedientes[0];
@@ -749,6 +749,7 @@ function MovimientosBlock({
   const isAsignado = !!user?._id && !!expediente?.asignados?.includes(user._id);
   const puedeCargarMovimiento =
     user?.role === 'secretario' || user?.role === 'arbitro' || isAsignado;
+  const esSecretario = user?.role === 'secretario';
 
   const [movTipo, setMovTipo]           = useState<MovimientoTipo>('DEMANDA_ACTUACION');
   const [movTitulo, setMovTitulo]       = useState('');
@@ -761,6 +762,7 @@ function MovimientosBlock({
   const [busqueda, setBusqueda]         = useState('');
   const [categoriaFiltro, setCategoriaFiltro] = useState<MovimientoCategoria | 'Todas'>('Todas');
   const [expandedId, setExpandedId]     = useState<string | null>(null);
+  const [deletingMovId, setDeletingMovId] = useState<string | null>(null);
 
   const handleArchivoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] ?? null;
@@ -819,6 +821,18 @@ function MovimientosBlock({
       setMovError(err?.response?.data?.message || 'No se pudo registrar el movimiento.');
     } finally {
       setIsSending(false);
+    }
+  };
+
+  const handleEliminarMovimiento = async (m: Movimiento) => {
+    if (!expediente || !confirm(`¿Eliminar el movimiento "${m.titulo}"?`)) return;
+    setDeletingMovId(m.id);
+    try {
+      await eliminarMovimiento(causaId, expediente.nroExpediente, m.id);
+    } catch {
+      alert('No se pudo eliminar el movimiento.');
+    } finally {
+      setDeletingMovId(null);
     }
   };
 
@@ -940,22 +954,31 @@ function MovimientosBlock({
             className="outline-none bg-transparent w-full text-slate-800 placeholder:text-slate-400"
           />
         </div>
-        {FILTER_TABS.map((tab) => (
-          <button
-            key={tab.value}
-            onClick={() => setCategoriaFiltro(tab.value)}
-            className={`px-3 py-1.5 rounded-lg border text-sm font-medium transition-colors ${
-              categoriaFiltro === tab.value
-                ? 'bg-[#001f3f] text-white border-[#001f3f]'
-                : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400'
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
-        <span className="text-xs text-slate-400 ml-1">
-          {movimientos.length} actuación{movimientos.length !== 1 ? 'es' : ''}
-        </span>
+        {FILTER_TABS.map((tab) => {
+          const count = tab.value === 'Todas'
+            ? movimientos.length
+            : movimientos.filter((m) => MOVIMIENTO_CATEGORIA[m.tipo] === tab.value).length;
+          return (
+            <button
+              key={tab.value}
+              onClick={() => setCategoriaFiltro(tab.value)}
+              className={`px-3 py-1.5 rounded-lg border text-sm font-medium transition-colors flex items-center gap-1.5 ${
+                categoriaFiltro === tab.value
+                  ? 'bg-[#001f3f] text-white border-[#001f3f]'
+                  : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400'
+              }`}
+            >
+              {tab.label}
+              <span className={`text-xs rounded-full px-1.5 py-0.5 font-semibold ${
+                categoriaFiltro === tab.value
+                  ? 'bg-white/20 text-white'
+                  : 'bg-slate-100 text-slate-500'
+              }`}>
+                {count}
+              </span>
+            </button>
+          );
+        })}
       </div>
 
       {/* Tabla */}
@@ -968,6 +991,7 @@ function MovimientosBlock({
               <th className="px-4 py-3 font-semibold text-left w-40">Tipo</th>
               <th className="px-4 py-3 font-semibold text-left w-44">Adjunto</th>
               <th className="px-4 py-3 w-8" />
+              {esSecretario && <th className="px-4 py-3 w-8" />}
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -1034,12 +1058,24 @@ function MovimientosBlock({
                         </button>
                       )}
                     </td>
+                    {esSecretario && (
+                      <td className="px-4 py-3">
+                        <button
+                          onClick={() => handleEliminarMovimiento(m)}
+                          disabled={deletingMovId === m.id}
+                          className="p-1 text-red-400 hover:text-red-600 disabled:opacity-40 transition-colors"
+                          title="Eliminar movimiento"
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      </td>
+                    )}
                   </tr>
                 );
               })}
             {movimientos.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-4 py-10 text-center text-slate-400 text-sm">
+                <td colSpan={esSecretario ? 6 : 5} className="px-4 py-10 text-center text-slate-400 text-sm">
                   Sin movimientos registrados.
                 </td>
               </tr>

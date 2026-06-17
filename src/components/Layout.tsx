@@ -116,7 +116,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           </div>
 
           <div className="text-[11px] font-medium uppercase tracking-tighter">
-            <a href="/help" className="hover:text-white transition-colors">Soporte </a>
+            <a id="tour-soporte" href="/help" className="hover:text-white transition-colors">Soporte</a>
           </div>
         </div>
       </footer>

@@ -128,7 +128,7 @@ export default function NuevaCausa() {
       <div className="max-w-4xl">
         <form onSubmit={handleSubmit} className="space-y-6">
 
-          <div className="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm space-y-5">
+          <div id="tour-nueva-datos" className="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm space-y-5">
             <div className="flex items-center gap-2 text-[#001f3f] mb-2">
               <Info size={18} className="text-blue-600" />
               <h2 className="font-bold uppercase tracking-wider text-xs">Datos del Expediente</h2>
@@ -175,7 +175,7 @@ export default function NuevaCausa() {
             </Field>
           </div>
 
-          <div className="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm space-y-5">
+          <div id="tour-nueva-tribunal" className="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm space-y-5">
             <div className="flex items-center gap-2 text-[#001f3f] mb-2">
               <Gavel size={18} className="text-blue-600" />
               <h2 className="font-bold uppercase tracking-wider text-xs">Composición del Tribunal</h2>
@@ -216,7 +216,7 @@ export default function NuevaCausa() {
             </div>
           </div>
 
-          <div className="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm">
+          <div id="tour-nueva-demanda" className="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm">
             <div className="flex items-center gap-2 text-[#001f3f] mb-4">
               <FileText size={18} className="text-blue-600" />
               <h2 className="font-bold uppercase tracking-wider text-xs">Demanda</h2>
@@ -253,7 +253,7 @@ export default function NuevaCausa() {
             )}
           </div>
 
-          <div className="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm space-y-5">
+          <div id="tour-nueva-sujetos" className="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm space-y-5">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 text-[#001f3f]">
                 <Users size={18} className="text-blue-600" />
@@ -356,7 +356,7 @@ export default function NuevaCausa() {
             </div>
           )}
 
-          <div className="flex items-center justify-end gap-4">
+          <div id="tour-nueva-enviar" className="flex items-center justify-end gap-4">
             <button
               type="button"
               onClick={() => navigate('/causas')}

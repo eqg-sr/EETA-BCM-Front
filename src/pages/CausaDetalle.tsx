@@ -5,6 +5,7 @@ import Layout from '../components/Layout';
 import StatusBadge from '../components/StatusBadge';
 import { useCausas, type Causa, type Movimiento, type NuevoMovimiento, type MovimientoTipo, type CausaStatus, type Sujeto, type SujetoVinculo, type CausaRelacionada } from '../context/CausasContext';
 import { useAuth, usePermissions } from '../context/AuthContext';
+import { useTour } from '../hooks/useTour';
 import api from '../services/api';
 import { ARBITROS_TITULARES, ARBITROS_TITULARES_NOMBRES, SECRETARIO_TRIBUNAL } from '../constants/tribunal';
 
@@ -35,6 +36,7 @@ export default function CausaDetalle() {
   const { user } = useAuth();
   const { isReadOnly } = usePermissions();
   const isSecretario = user?.role === 'secretario' && !isReadOnly;
+  const { startDetalleTour } = useTour();
 
   const [statusLoading, setStatusLoading] = useState(false);
   const [statusError, setStatusError]     = useState<string | null>(null);
@@ -42,6 +44,11 @@ export default function CausaDetalle() {
   useEffect(() => {
     if (id) fetchCausa(id);
   }, [id]);
+
+  useEffect(() => {
+    if (!currentCausa || !user) return;
+    setTimeout(() => startDetalleTour(user._id, user.role), 600);
+  }, [currentCausa?.id]);
 
   if (isLoading) {
     return (
@@ -146,7 +153,7 @@ export default function CausaDetalle() {
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         <aside className="lg:col-span-2">
-          <nav className="lg:sticky lg:top-24 space-y-1">
+          <nav id="tour-detalle-nav" className="lg:sticky lg:top-24 space-y-1">
             <p className="text-[10px] uppercase font-bold tracking-widest text-slate-400 px-3 mb-2">Secciones</p>
             {SECTIONS.map(({ id, label, icon: Icon }) => (
               <a

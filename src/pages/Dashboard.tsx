@@ -180,7 +180,9 @@ export default function Dashboard() {
 
         {STATUS_OPTIONS.map((s) => (
           <div key={s.value} className={`border rounded-2xl p-5 shadow-sm ${STATUS_CARD_CLASSES[s.value]}`}>
-            <div className="text-[11px] uppercase font-bold tracking-widest mb-2 opacity-70">{s.label}</div>
+            <div className="h-5 flex items-center mb-2">
+              <span className="text-[11px] uppercase font-bold tracking-widest opacity-70">{s.label}</span>
+            </div>
             <div className="text-3xl font-extrabold">{statusCounts[s.value]}</div>
           </div>
         ))}

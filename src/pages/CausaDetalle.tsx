@@ -741,7 +741,7 @@ function MovimientosBlock({
   movimientos: Movimiento[];
   sujetos: Sujeto[];
 }) {
-  const { currentCausa, agregarMovimiento, eliminarMovimiento, agregarExpediente } = useCausas();
+  const { currentCausa, agregarMovimiento, actualizarMovimiento, eliminarMovimiento, agregarExpediente } = useCausas();
   const { user } = useAuth();
 
   const expediente = currentCausa?.expedientes[0];
@@ -759,10 +759,17 @@ function MovimientosBlock({
   const [movArchivoError, setMovArchivoError] = useState<string | null>(null);
   const [isSending, setIsSending]       = useState(false);
   const [movError, setMovError]         = useState<string | null>(null);
-  const [busqueda, setBusqueda]         = useState('');
+  const [busqueda, setBusqueda]           = useState('');
   const [categoriaFiltro, setCategoriaFiltro] = useState<MovimientoCategoria | 'Todas'>('Todas');
-  const [expandedId, setExpandedId]     = useState<string | null>(null);
+  const [expandedId, setExpandedId]       = useState<string | null>(null);
   const [deletingMovId, setDeletingMovId] = useState<string | null>(null);
+  const [modalMov, setModalMov]           = useState<Movimiento | null>(null);
+  const [editTitulo, setEditTitulo]       = useState('');
+  const [editDescripcion, setEditDescripcion] = useState('');
+  const [editTipo, setEditTipo]           = useState<MovimientoTipo>('DEMANDA_ACTUACION');
+  const [editSujeto, setEditSujeto]       = useState('');
+  const [editSaving, setEditSaving]       = useState(false);
+  const [editError, setEditError]         = useState<string | null>(null);
 
   const handleArchivoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] ?? null;
@@ -821,6 +828,36 @@ function MovimientosBlock({
       setMovError(err?.response?.data?.message || 'No se pudo registrar el movimiento.');
     } finally {
       setIsSending(false);
+    }
+  };
+
+  const openModal = (m: Movimiento) => {
+    setModalMov(m);
+    setEditTitulo(m.titulo);
+    setEditDescripcion(m.descripcion ?? '');
+    setEditTipo(m.tipo);
+    setEditSujeto(m.sujetoNombre ?? '');
+    setEditError(null);
+  };
+
+  const closeModal = () => { setModalMov(null); setEditError(null); };
+
+  const handleGuardarEdicion = async () => {
+    if (!modalMov || !expediente) return;
+    setEditSaving(true);
+    setEditError(null);
+    try {
+      await actualizarMovimiento(causaId, expediente.nroExpediente, modalMov.id, {
+        tipo:         editTipo,
+        titulo:       editTitulo.trim(),
+        descripcion:  editDescripcion.trim() || undefined,
+        sujetoNombre: editSujeto.trim() || undefined,
+      });
+      closeModal();
+    } catch {
+      setEditError('No se pudo guardar los cambios.');
+    } finally {
+      setEditSaving(false);
     }
   };
 
@@ -954,7 +991,10 @@ function MovimientosBlock({
             className="outline-none bg-transparent w-full text-slate-800 placeholder:text-slate-400"
           />
         </div>
-        {FILTER_TABS.map((tab) => {
+        {FILTER_TABS.filter((tab) =>
+          tab.value === 'Todas' ||
+          movimientos.some((m) => MOVIMIENTO_CATEGORIA[m.tipo] === tab.value)
+        ).map((tab) => {
           const count = tab.value === 'Todas'
             ? movimientos.length
             : movimientos.filter((m) => MOVIMIENTO_CATEGORIA[m.tipo] === tab.value).length;
@@ -970,9 +1010,7 @@ function MovimientosBlock({
             >
               {tab.label}
               <span className={`text-xs rounded-full px-1.5 py-0.5 font-semibold ${
-                categoriaFiltro === tab.value
-                  ? 'bg-white/20 text-white'
-                  : 'bg-slate-100 text-slate-500'
+                categoriaFiltro === tab.value ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'
               }`}>
                 {count}
               </span>
@@ -991,7 +1029,6 @@ function MovimientosBlock({
               <th className="px-4 py-3 font-semibold text-left w-40">Tipo</th>
               <th className="px-4 py-3 font-semibold text-left w-44">Adjunto</th>
               <th className="px-4 py-3 w-8" />
-              {esSecretario && <th className="px-4 py-3 w-8" />}
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -1007,7 +1044,11 @@ function MovimientosBlock({
                 const cat = MOVIMIENTO_CATEGORIA[m.tipo];
                 const expanded = expandedId === m.id;
                 return (
-                  <tr key={m.id} className="hover:bg-slate-50 align-top">
+                  <tr
+                    key={m.id}
+                    className={`align-top ${esSecretario ? 'hover:bg-blue-50/40 cursor-pointer' : 'hover:bg-slate-50'}`}
+                    onClick={esSecretario ? () => openModal(m) : undefined}
+                  >
                     <td className="px-4 py-3 whitespace-nowrap">
                       <div className="flex items-center gap-1.5">
                         {isRecent(m.fecha) && (
@@ -1035,7 +1076,7 @@ function MovimientosBlock({
                         <div className="text-xs text-slate-500 mt-1">{m.sujetoNombre}</div>
                       )}
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                       {m.nombreArchivo ? (
                         <button
                           onClick={() => handleDescargarMovimiento(m)}
@@ -1048,8 +1089,8 @@ function MovimientosBlock({
                         <span className="text-slate-300">—</span>
                       )}
                     </td>
-                    <td className="px-4 py-3">
-                      {m.descripcion && m.descripcion.length > 80 && (
+                    <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                      {!esSecretario && m.descripcion && m.descripcion.length > 80 && (
                         <button
                           onClick={() => setExpandedId(expanded ? null : m.id)}
                           className="p-1 text-slate-400 hover:text-slate-600 transition-colors"
@@ -1057,25 +1098,16 @@ function MovimientosBlock({
                           <ChevronDown size={16} className={`transition-transform ${expanded ? 'rotate-180' : ''}`} />
                         </button>
                       )}
+                      {esSecretario && (
+                        <ChevronDown size={16} className="text-slate-300" />
+                      )}
                     </td>
-                    {esSecretario && (
-                      <td className="px-4 py-3">
-                        <button
-                          onClick={() => handleEliminarMovimiento(m)}
-                          disabled={deletingMovId === m.id}
-                          className="p-1 text-red-400 hover:text-red-600 disabled:opacity-40 transition-colors"
-                          title="Eliminar movimiento"
-                        >
-                          <Trash2 size={15} />
-                        </button>
-                      </td>
-                    )}
                   </tr>
                 );
               })}
             {movimientos.length === 0 && (
               <tr>
-                <td colSpan={esSecretario ? 6 : 5} className="px-4 py-10 text-center text-slate-400 text-sm">
+                <td colSpan={5} className="px-4 py-10 text-center text-slate-400 text-sm">
                   Sin movimientos registrados.
                 </td>
               </tr>
@@ -1083,6 +1115,108 @@ function MovimientosBlock({
           </tbody>
         </table>
       </div>
+
+      {/* Modal detalle/edición — solo secretario */}
+      {esSecretario && modalMov && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
+          onClick={closeModal}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6 space-y-5"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold mb-2 ${CATEGORIA_BADGE[MOVIMIENTO_CATEGORIA[editTipo]]}`}>
+                  {MOVIMIENTO_CATEGORIA[editTipo]}
+                </span>
+                <h2 className="text-base font-bold text-slate-900">{modalMov.titulo}</h2>
+                <p className="text-xs text-slate-400 mt-0.5">{formatMovFecha(modalMov.fecha).date} · {formatMovFecha(modalMov.fecha).time} hs</p>
+              </div>
+              <button onClick={closeModal} className="text-slate-400 hover:text-slate-600 p-1 text-lg leading-none">✕</button>
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs font-semibold text-slate-600 mb-1 block">Tipo</label>
+                <select
+                  value={editTipo}
+                  onChange={(e) => setEditTipo(e.target.value as MovimientoTipo)}
+                  className="form-input text-sm w-full"
+                >
+                  {(Object.keys(MOVIMIENTO_TIPO_LABELS) as MovimientoTipo[]).map((t) => (
+                    <option key={t} value={t}>{MOVIMIENTO_TIPO_LABELS[t]}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-slate-600 mb-1 block">Título</label>
+                <input
+                  value={editTitulo}
+                  onChange={(e) => setEditTitulo(e.target.value)}
+                  className="form-input text-sm w-full"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-slate-600 mb-1 block">Descripción</label>
+                <textarea
+                  value={editDescripcion}
+                  onChange={(e) => setEditDescripcion(e.target.value)}
+                  rows={4}
+                  className="form-input text-sm resize-none w-full"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-slate-600 mb-1 block">Sujeto</label>
+                <input
+                  value={editSujeto}
+                  onChange={(e) => setEditSujeto(e.target.value)}
+                  placeholder="Nombre del sujeto (opcional)"
+                  className="form-input text-sm w-full"
+                />
+              </div>
+            </div>
+
+            {editError && <p className="text-xs text-red-600">{editError}</p>}
+
+            {modalMov.nombreArchivo && (
+              <button
+                onClick={() => handleDescargarMovimiento(modalMov)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 text-xs text-slate-700 hover:border-slate-400 transition-colors"
+              >
+                <Download size={13} className="text-slate-500" />
+                {modalMov.nombreArchivo}
+              </button>
+            )}
+
+            <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+              <button
+                onClick={() => { closeModal(); handleEliminarMovimiento(modalMov); }}
+                disabled={deletingMovId === modalMov.id}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold text-red-600 hover:bg-red-50 disabled:opacity-40 transition-colors"
+              >
+                <Trash2 size={14} /> Eliminar
+              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={closeModal}
+                  className="px-4 py-2 rounded-lg border border-slate-200 text-xs font-semibold text-slate-600 hover:border-slate-400 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleGuardarEdicion}
+                  disabled={editSaving || !editTitulo.trim()}
+                  className="px-4 py-2 rounded-lg bg-[#001f3f] text-white text-xs font-semibold hover:bg-[#002d5a] disabled:opacity-50 transition-colors"
+                >
+                  {editSaving ? 'Guardando...' : 'Guardar cambios'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

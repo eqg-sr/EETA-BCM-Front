@@ -1044,11 +1044,7 @@ function MovimientosBlock({
                 const cat = MOVIMIENTO_CATEGORIA[m.tipo];
                 const expanded = expandedId === m.id;
                 return (
-                  <tr
-                    key={m.id}
-                    className={`align-top ${esSecretario ? 'hover:bg-blue-50/40 cursor-pointer' : 'hover:bg-slate-50'}`}
-                    onClick={esSecretario ? () => openModal(m) : undefined}
-                  >
+                  <tr key={m.id} className="align-top hover:bg-slate-50">
                     <td className="px-4 py-3 whitespace-nowrap">
                       <div className="flex items-center gap-1.5">
                         {isRecent(m.fecha) && (
@@ -1076,7 +1072,7 @@ function MovimientosBlock({
                         <div className="text-xs text-slate-500 mt-1">{m.sujetoNombre}</div>
                       )}
                     </td>
-                    <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                    <td className="px-4 py-3">
                       {m.nombreArchivo ? (
                         <button
                           onClick={() => handleDescargarMovimiento(m)}
@@ -1089,17 +1085,24 @@ function MovimientosBlock({
                         <span className="text-slate-300">—</span>
                       )}
                     </td>
-                    <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
-                      {!esSecretario && m.descripcion && m.descripcion.length > 80 && (
+                    <td className="px-4 py-3">
+                      {esSecretario ? (
                         <button
-                          onClick={() => setExpandedId(expanded ? null : m.id)}
-                          className="p-1 text-slate-400 hover:text-slate-600 transition-colors"
+                          onClick={() => openModal(m)}
+                          className="p-1 text-slate-400 hover:text-[#001f3f] transition-colors"
+                          title="Ver / editar movimiento"
                         >
-                          <ChevronDown size={16} className={`transition-transform ${expanded ? 'rotate-180' : ''}`} />
+                          <ChevronDown size={16} />
                         </button>
-                      )}
-                      {esSecretario && (
-                        <ChevronDown size={16} className="text-slate-300" />
+                      ) : (
+                        m.descripcion && m.descripcion.length > 80 && (
+                          <button
+                            onClick={() => setExpandedId(expanded ? null : m.id)}
+                            className="p-1 text-slate-400 hover:text-slate-600 transition-colors"
+                          >
+                            <ChevronDown size={16} className={`transition-transform ${expanded ? 'rotate-180' : ''}`} />
+                          </button>
+                        )
                       )}
                     </td>
                   </tr>

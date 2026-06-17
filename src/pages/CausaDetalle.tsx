@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, Paperclip, FilePlus, Send, Upload, Info, Users, ListOrdered, Link2, Download, Trash2, UserPlus, FileText, Gavel, Search, ChevronDown } from 'lucide-react';
+import { ArrowLeft, FilePlus, Send, Upload, Info, Users, ListOrdered, Link2, Download, Trash2, UserPlus, FileText, Gavel, Search, ChevronDown } from 'lucide-react';
 
 const ARBITROS_TITULARES = [
   { nombre: 'Pedro Alvaro Pérez Catón',  matricula: '(pendiente)' }, // TODO: completar matrícula

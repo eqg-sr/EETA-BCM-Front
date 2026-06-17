@@ -146,7 +146,7 @@ export default function CausaDetalle() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        <aside className="lg:col-span-3">
+        <aside className="lg:col-span-2">
           <nav className="lg:sticky lg:top-24 space-y-1">
             <p className="text-[10px] uppercase font-bold tracking-widest text-slate-400 px-3 mb-2">Secciones</p>
             {SECTIONS.map(({ id, label, icon: Icon }) => (
@@ -162,7 +162,7 @@ export default function CausaDetalle() {
           </nav>
         </aside>
 
-        <div className="lg:col-span-9 space-y-8">
+        <div className="lg:col-span-10 space-y-8">
           <Section id="info" title="Información General" icon={Info}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <InfoRow label="N° de Expediente"     value={causa.nroExpedienteElectronico || causa.numeroInterno} />

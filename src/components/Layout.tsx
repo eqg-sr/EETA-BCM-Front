@@ -100,14 +100,14 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         </div>
       </header>
 
-      <main className="flex-1 max-w-7xl w-full mx-auto p-6 md:p-10">
+      <main className="flex-1 max-w-screen-2xl w-full mx-auto p-6 md:p-10">
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 min-h-[70vh]">
           {children}
         </div>
       </main>
 
       <footer className="bg-[#001f3f] text-white/70 py-6 px-6 border-t border-white/10">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4 text-sm">
+        <div className="max-w-screen-2xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4 text-sm">
           <div className="flex items-center gap-2">
             <span className="font-bold text-white">Expediente Electronico Tribunal Arbitral BCM</span>
             <span>&copy; 2026</span>

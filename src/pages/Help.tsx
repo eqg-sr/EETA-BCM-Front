@@ -1,10 +1,14 @@
 import Layout from '../components/Layout';
-import { MessageCircle, Mail, Headset, BookOpen, ArrowLeft } from 'lucide-react';
+import { MessageCircle, Mail, Headset, BookOpen, ArrowLeft, PlayCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import logo from '../assets/LogoNegro.png';
+import { useAuth } from '../context/AuthContext';
+import { useTour } from '../hooks/useTour';
 
 export default function HelpCenter() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const { resetAndStartTour } = useTour();
 
   const contactMethods = [
     {
@@ -75,8 +79,8 @@ export default function HelpCenter() {
             <BookOpen size={14} />
             Manual
           </button>
-          
-          <button 
+
+          <button
             onClick={() => navigate('/causas')}
             className="flex items-center justify-center gap-2 py-2.5 px-3 bg-white text-slate-600 text-[11px] font-bold rounded-lg border border-slate-200 hover:bg-slate-50 transition-all"
           >
@@ -84,6 +88,19 @@ export default function HelpCenter() {
             Inicio
           </button>
         </div>
+
+        {user && (
+          <button
+            onClick={() => {
+              resetAndStartTour(user._id, user.role);
+              navigate(user.role === 'secretario' || user.role === 'arbitro' ? '/dashboard' : '/causas');
+            }}
+            className="mt-3 w-full flex items-center justify-center gap-2 py-2.5 px-3 bg-blue-50 text-blue-700 text-[11px] font-bold rounded-lg border border-blue-200 hover:bg-blue-100 transition-all"
+          >
+            <PlayCircle size={14} />
+            Ver tutorial de bienvenida
+          </button>
+        )}
 
         <div className="mt-8 text-center">
           <p className="text-[9px] text-slate-300 font-bold uppercase tracking-widest">

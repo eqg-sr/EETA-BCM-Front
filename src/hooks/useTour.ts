@@ -1,11 +1,10 @@
-/*
- * Tour de bienvenida deshabilitado para esta release.
- * Se conserva la implementación para reactivarla más adelante.
- *
-import { Tour } from 'shepherd.js';
+import Shepherd from 'shepherd.js';
 import type { Role } from '../context/AuthContext';
 
-const STORAGE_KEY = (role: Role) => `eeta_tour_completado_${role}`;
+const { Tour } = Shepherd;
+type TourInstance = InstanceType<typeof Tour>;
+
+const STORAGE_KEY = (userId: string) => `eeta_tour_completado_${userId}`;
 
 const BTN_PRIMARY =
   'px-4 py-2 bg-[#001f3f] text-white text-xs font-semibold rounded-lg hover:bg-[#002d5a] transition-colors';
@@ -19,7 +18,7 @@ function elExists(selector: string): boolean {
 }
 
 function makeStep(
-  tour: Tour,
+  tour: TourInstance,
   opts: {
     id: string;
     title: string;
@@ -66,7 +65,7 @@ function makeStep(
   });
 }
 
-function buildTour(role: Role): Tour {
+function buildTour(role: Role): TourInstance {
   const tour = new Tour({
     useModalOverlay: true,
     defaultStepOptions: {
@@ -75,10 +74,6 @@ function buildTour(role: Role): Tour {
       cancelIcon: { enabled: true },
     },
   });
-
-  const onDone = () => localStorage.setItem(STORAGE_KEY(role), 'true');
-  tour.on('complete', onDone);
-  tour.on('cancel', onDone);
 
   switch (role) {
     case 'secretario':
@@ -96,15 +91,15 @@ function buildTour(role: Role): Tour {
       });
       makeStep(tour, {
         id: 'sec-3',
-        title: 'Composición del Tribunal',
-        text: 'Los árbitros titulares y el secretario están fijos. Podés designar árbitros suplentes para cada expediente.',
-        attachTo: { element: '#tribunal', on: 'top' },
-      });
-      makeStep(tour, {
-        id: 'sec-4',
         title: 'Panel de Administración',
         text: 'Desde acá aprobás nuevos usuarios, los asignás a expedientes y gestionás el acceso al sistema.',
         attachTo: { element: '#tour-nav-admin', on: 'bottom' },
+      });
+      makeStep(tour, {
+        id: 'sec-4',
+        title: 'Dashboard',
+        text: 'En el dashboard encontrás un resumen del estado general de los expedientes, estadísticas y movimientos recientes.',
+        attachTo: { element: '#tour-nav-dashboard', on: 'bottom' },
       });
       makeStep(tour, {
         id: 'sec-5',
@@ -194,18 +189,25 @@ function buildTour(role: Role): Tour {
 }
 
 export function useTour() {
-  function startTour(role: Role) {
-    if (localStorage.getItem(STORAGE_KEY(role))) return;
+  function startTour(userId: string, role: Role) {
+    if (localStorage.getItem(STORAGE_KEY(userId))) return;
     const tour = buildTour(role);
-    if (tour.steps.length > 0) tour.start();
+    if (tour.steps.length > 0) {
+      tour.on('complete', () => localStorage.setItem(STORAGE_KEY(userId), 'true'));
+      tour.on('cancel',   () => localStorage.setItem(STORAGE_KEY(userId), 'true'));
+      tour.start();
+    }
   }
 
-  function resetTour(role: Role) {
-    localStorage.removeItem(STORAGE_KEY(role));
+  function resetAndStartTour(userId: string, role: Role) {
+    localStorage.removeItem(STORAGE_KEY(userId));
+    const tour = buildTour(role);
+    if (tour.steps.length > 0) {
+      tour.on('complete', () => localStorage.setItem(STORAGE_KEY(userId), 'true'));
+      tour.on('cancel',   () => localStorage.setItem(STORAGE_KEY(userId), 'true'));
+      tour.start();
+    }
   }
 
-  return { startTour, resetTour };
+  return { startTour, resetAndStartTour };
 }
-*/
-
-export {};

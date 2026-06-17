@@ -16,7 +16,7 @@ type AuthContextType = {
   user: User | null;
   token: string | null;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<Role>;
+  login: (email: string, password: string) => Promise<User>;
   logout: () => void;
 };
 
@@ -42,14 +42,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       .finally(() => setIsLoading(false));
   }, []);
 
-  const login = async (email: string, password: string): Promise<Role> => {
+  const login = async (email: string, password: string): Promise<User> => {
     const { data } = await api.post<{ token: string }>('/auth/login', { email, password });
     localStorage.setItem('token', data.token);
     setToken(data.token);
     const me = await api.get<User>('/auth/self');
     const userData: User = { _id: me.data._id, email: me.data.email, name: me.data.name, role: me.data.role, activo: me.data.activo, aprobado: me.data.aprobado };
     setUser(userData);
-    return userData.role;
+    return userData;
   };
 
   const logout = () => {

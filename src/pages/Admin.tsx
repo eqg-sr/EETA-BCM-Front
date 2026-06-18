@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Layout from '../components/Layout';
 import api from '../services/api';
-import { AlertCircle, Search, UserPlus, UserMinus, Users, Link2, Loader2 } from 'lucide-react';
+import { AlertCircle, Search, UserPlus, UserMinus, Users, Link2, Loader2, ChevronDown, ChevronUp } from 'lucide-react';
 import { ROLE_LABELS, type Role } from '../context/AuthContext';
+import HelpTip from '../components/HelpTip';
 
 type AdminUser = {
   _id: string;
@@ -16,6 +17,7 @@ type AdminUser = {
 type CausaResult = {
   id: string;
   identificador: string;
+  nroExpedienteElectronico?: string;
   caratula: string;
   expedientes: { nroExpediente: string; caratula: string }[];
 };
@@ -100,6 +102,7 @@ function UsuariosTab() {
             className="w-4 h-4 accent-[#001f3f]"
           />
           Mostrar solo pendientes de aprobación
+          <HelpTip text="Filtra para ver únicamente los usuarios que se registraron pero aún no fueron aprobados. Sin aprobación no pueden acceder al sistema." position="right" width="w-64" />
         </label>
         <span className="text-xs text-slate-400">{displayed.length} usuario{displayed.length !== 1 ? 's' : ''}</span>
       </div>
@@ -129,19 +132,22 @@ function UsuariosTab() {
                 <td className="px-4 py-3 font-medium text-slate-800">{u.name}</td>
                 <td className="px-4 py-3 text-slate-600 font-mono text-xs">{u.email}</td>
                 <td className="px-4 py-3">
-                  <select
-                    value={u.role}
-                    disabled={actionLoading[u._id]}
-                    onChange={(e) => cambiarRol(u._id, e.target.value as Role)}
-                    className="text-xs border border-slate-200 rounded-lg px-2 py-1 bg-white text-slate-700 focus:outline-none focus:border-[#001f3f]"
-                  >
-                    {ASSIGNABLE_ROLES.map((r) => (
-                      <option key={r} value={r}>{ROLE_LABELS[r]}</option>
-                    ))}
-                    {u.role === 'secretario' && (
-                      <option value="secretario">{ROLE_LABELS.secretario}</option>
-                    )}
-                  </select>
+                  <div className="flex items-center gap-1.5">
+                    <select
+                      value={u.role}
+                      disabled={actionLoading[u._id]}
+                      onChange={(e) => cambiarRol(u._id, e.target.value as Role)}
+                      className="text-xs border border-slate-200 rounded-lg px-2 py-1 bg-white text-slate-700 focus:outline-none focus:border-[#001f3f]"
+                    >
+                      {ASSIGNABLE_ROLES.map((r) => (
+                        <option key={r} value={r}>{ROLE_LABELS[r]}</option>
+                      ))}
+                      {u.role === 'secretario' && (
+                        <option value="secretario">{ROLE_LABELS.secretario}</option>
+                      )}
+                    </select>
+                    <HelpTip text="Actor y Demandado ven solo sus expedientes. Árbitro ve todos. Perito tiene acceso de solo lectura. Secretario tiene acceso total y administra el sistema." position="right" width="w-64" />
+                  </div>
                 </td>
                 <td className="px-4 py-3">
                   <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${u.activo ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'}`}>
@@ -189,15 +195,25 @@ function UsuariosTab() {
   );
 }
 
+const ACTION_HELP: Partial<Record<string, string>> = {
+  Aprobar:    'Habilita al usuario para acceder al sistema. Sin aprobación, no puede ingresar aunque haya completado el registro.',
+  Desactivar: 'Suspende temporalmente el acceso. El usuario no podrá iniciar sesión hasta ser reactivado.',
+  Activar:    'Restaura el acceso de un usuario previamente desactivado.',
+};
+
 function ActionBtn({ label, loading, className, onClick }: { label: string; loading?: boolean; className: string; onClick: () => void }) {
+  const help = ACTION_HELP[label];
   return (
-    <button
-      onClick={onClick}
-      disabled={loading}
-      className={`px-3 py-1 rounded-lg text-xs font-semibold transition-colors disabled:opacity-50 ${className}`}
-    >
-      {label}
-    </button>
+    <div className="flex items-center gap-1">
+      <button
+        onClick={onClick}
+        disabled={loading}
+        className={`px-3 py-1 rounded-lg text-xs font-semibold transition-colors disabled:opacity-50 ${className}`}
+      >
+        {label}
+      </button>
+      {help && <HelpTip text={help} position="top" />}
+    </div>
   );
 }
 
@@ -206,7 +222,9 @@ function ActionBtn({ label, loading, className, onClick }: { label: string; load
 function AsignacionesTab() {
   const [causaSearch, setCausaSearch]     = useState('');
   const [causaResults, setCausaResults]   = useState<CausaResult[]>([]);
-  const [causaLoading, setCausaLoading]   = useState(false);
+  const [allCausas, setAllCausas]         = useState<CausaResult[]>([]);
+  const [allCausasLoading, setAllCausasLoading] = useState(false);
+  const [causaListOpen, setCausaListOpen] = useState(false);
   const [selectedCausa, setSelectedCausa] = useState<CausaResult | null>(null);
   const [asignados, setAsignados]         = useState<Record<string, AssignedUser[]>>({});
   const [asigLoading, setAsigLoading]     = useState<Record<string, boolean>>({});
@@ -214,28 +232,30 @@ function AsignacionesTab() {
   const [userResults, setUserResults]     = useState<Record<string, AdminUser[]>>({});
   const [userSearchLoading, setUserSearchLoading] = useState<Record<string, boolean>>({});
 
-  const causaDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const userDebounceRefs = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
-
-  const searchCausas = useCallback(async (q: string) => {
-    if (!q.trim()) { setCausaResults([]); return; }
-    setCausaLoading(true);
-    try {
-      const { data } = await api.get<{ data: CausaResult[] }>('/causas', { params: { search: q, limit: 8 } });
-      setCausaResults(data.data ?? []);
-    } catch {
-      setCausaResults([]);
-    } finally {
-      setCausaLoading(false);
-    }
-  }, []);
 
   const handleCausaInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     const q = e.target.value;
     setCausaSearch(q);
-    if (causaDebounceRef.current) clearTimeout(causaDebounceRef.current);
-    causaDebounceRef.current = setTimeout(() => searchCausas(q), 350);
+    setCausaListOpen(true);
+    const term = q.trim().toLowerCase();
+    if (!term) { setCausaResults([]); return; }
+    setCausaResults(
+      allCausas.filter((c) =>
+        (c.nroExpedienteElectronico ?? '').toLowerCase().includes(term) ||
+        (c.identificador ?? '').toLowerCase().includes(term) ||
+        (c.caratula ?? '').toLowerCase().includes(term)
+      )
+    );
   };
+
+  useEffect(() => {
+    setAllCausasLoading(true);
+    api.get<{ data: CausaResult[] }>('/causas', { params: { limit: 1000 } })
+      .then(({ data }) => setAllCausas(data.data ?? []))
+      .catch(() => setAllCausas([]))
+      .finally(() => setAllCausasLoading(false));
+  }, []);
 
   const fetchAsignados = useCallback(async (causaId: string, nroExpediente: string) => {
     setAsigLoading((prev) => ({ ...prev, [nroExpediente]: true }));
@@ -251,8 +271,9 @@ function AsignacionesTab() {
 
   const selectCausa = async (causa: CausaResult) => {
     setSelectedCausa(causa);
-    setCausaSearch(causa.identificador);
+    setCausaSearch(causa.nroExpedienteElectronico || causa.identificador);
     setCausaResults([]);
+    setCausaListOpen(false);
     setAsignados({});
     setUserSearch({});
     setUserResults({});
@@ -310,34 +331,47 @@ function AsignacionesTab() {
             type="text"
             value={causaSearch}
             onChange={handleCausaInput}
-            placeholder="Escribí carátula o identificador..."
+            placeholder="Escribí carátula o nro. de expediente electrónico..."
             className="w-full pl-9 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#001f3f]/10 focus:border-[#001f3f] transition-all"
           />
-          {causaLoading && (
+          {allCausasLoading ? (
             <Loader2 size={16} className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin text-slate-400" />
+          ) : (
+            <button
+              type="button"
+              onClick={() => setCausaListOpen((open) => !open)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+            >
+              {causaListOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+            </button>
           )}
         </div>
 
-        {causaResults.length > 0 && (
-          <div className="mt-1 bg-white border border-slate-200 rounded-xl shadow-lg overflow-hidden">
-            {causaResults.map((c) => (
-              <button
-                key={c.id}
-                onClick={() => selectCausa(c)}
-                className="w-full text-left px-4 py-3 hover:bg-slate-50 border-b border-slate-100 last:border-0 transition-colors"
-              >
-                <div className="text-xs font-mono text-[#001f3f] font-semibold">{c.identificador}</div>
-                <div className="text-sm text-slate-700">{c.caratula}</div>
-              </button>
-            ))}
-          </div>
-        )}
+        {(() => {
+          if (!causaListOpen) return null;
+          const list = causaSearch.trim() ? causaResults : allCausas;
+          if (list.length === 0) return null;
+          return (
+            <div className="mt-1 max-h-72 overflow-y-auto bg-white border border-slate-200 rounded-xl shadow-lg">
+              {list.map((c) => (
+                <button
+                  key={c.id}
+                  onClick={() => selectCausa(c)}
+                  className="w-full text-left px-4 py-3 hover:bg-slate-50 border-b border-slate-100 last:border-0 transition-colors"
+                >
+                  <div className="text-xs font-mono text-[#001f3f] font-semibold">{c.nroExpedienteElectronico || c.identificador}</div>
+                  <div className="text-sm text-slate-700">{c.caratula}</div>
+                </button>
+              ))}
+            </div>
+          );
+        })()}
       </div>
 
       {selectedCausa && (
         <div className="space-y-4">
           <div className="flex items-center gap-2 pb-2 border-b border-slate-200">
-            <h3 className="text-sm font-bold text-[#001f3f]">{selectedCausa.identificador}</h3>
+            <h3 className="text-sm font-bold text-[#001f3f]">{selectedCausa.nroExpedienteElectronico || selectedCausa.identificador}</h3>
             <span className="text-slate-400 text-sm">—</span>
             <span className="text-sm text-slate-600">{selectedCausa.caratula}</span>
           </div>
@@ -359,32 +393,11 @@ function AsignacionesTab() {
                 </div>
               ) : (
                 <>
-                  <div className="space-y-2">
-                    <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Usuarios asignados</p>
-                    {(asignados[exp.nroExpediente] ?? []).length === 0 ? (
-                      <p className="text-sm text-slate-400">Sin usuarios asignados.</p>
-                    ) : (
-                      <div className="space-y-1">
-                        {(asignados[exp.nroExpediente] ?? []).map((u) => (
-                          <div key={u._id} className="flex items-center justify-between bg-white rounded-lg border border-slate-200 px-3 py-2">
-                            <div>
-                              <span className="text-sm font-medium text-slate-800">{u.name}</span>
-                              <span className="text-xs text-slate-400 ml-2">{ROLE_LABELS[u.role]}</span>
-                            </div>
-                            <button
-                              onClick={() => quitarUsuario(selectedCausa.id, exp.nroExpediente, u._id)}
-                              className="flex items-center gap-1 px-2 py-1 text-xs font-semibold text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                            >
-                              <UserMinus size={13} /> Quitar
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
                   <div className="relative">
-                    <p className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Agregar usuario</p>
+                    <p className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2 flex items-center gap-1.5">
+                      Agregar usuario
+                      <HelpTip text="Busca un usuario registrado y aprobado para asignarlo como parte en este expediente. Así podrá ver y operar en él según su rol." position="right" width="w-60" />
+                    </p>
                     <div className="relative">
                       <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                       <input
@@ -399,7 +412,7 @@ function AsignacionesTab() {
                       )}
                     </div>
                     {(userResults[exp.nroExpediente] ?? []).length > 0 && (
-                      <div className="absolute z-10 mt-1 w-full bg-white border border-slate-200 rounded-xl shadow-lg overflow-hidden">
+                      <div className="absolute z-10 mt-1 w-full max-h-60 overflow-y-auto bg-white border border-slate-200 rounded-xl shadow-lg">
                         {(userResults[exp.nroExpediente] ?? []).map((u) => (
                           <button
                             key={u._id}
@@ -414,6 +427,33 @@ function AsignacionesTab() {
                               <UserPlus size={13} /> Agregar
                             </span>
                           </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Usuarios asignados</p>
+                    {(asignados[exp.nroExpediente] ?? []).length === 0 ? (
+                      <p className="text-sm text-slate-400">Sin usuarios asignados.</p>
+                    ) : (
+                      <div className="space-y-1">
+                        {(asignados[exp.nroExpediente] ?? []).map((u) => (
+                          <div key={u._id} className="flex items-center justify-between bg-white rounded-lg border border-slate-200 px-3 py-2">
+                            <div>
+                              <span className="text-sm font-medium text-slate-800">{u.name}</span>
+                              <span className="text-xs text-slate-400 ml-2">{ROLE_LABELS[u.role]}</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <button
+                                onClick={() => quitarUsuario(selectedCausa.id, exp.nroExpediente, u._id)}
+                                className="flex items-center gap-1 px-2 py-1 text-xs font-semibold text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                              >
+                                <UserMinus size={13} /> Quitar
+                              </button>
+                              <HelpTip text="Desvincula al usuario de este expediente. Dejará de tener acceso a él, pero su cuenta permanece activa en el sistema." position="left" width="w-56" />
+                            </div>
+                          </div>
                         ))}
                       </div>
                     )}

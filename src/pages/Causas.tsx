@@ -2,13 +2,13 @@ import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { FolderOpen, Plus, Search, ExternalLink, ChevronLeft, ChevronRight, Download } from 'lucide-react';
 import Layout from '../components/Layout';
-import StatusBadge from '../components/StatusBadge';
 import { useCausas, type Causa, type CausaStatus } from '../context/CausasContext';
 import { usePermissions } from '../context/AuthContext';
+import HelpTip from '../components/HelpTip';
 import api from '../services/api';
+import { ARBITROS_TITULARES_NOMBRES } from '../constants/tribunal';
 
 const STATUS_OPTIONS: { value: CausaStatus; label: string }[] = [
-  { value: 'pendiente',  label: 'Pendiente' },
   { value: 'iniciado',   label: 'Iniciado' },
   { value: 'en_proceso', label: 'En proceso' },
   { value: 'cerrado',    label: 'Cerrado' },
@@ -61,11 +61,14 @@ export default function Causas() {
     }
   };
 
+  const getArbitrosTitulares = (causa: Causa) =>
+    causa.arbitros && causa.arbitros.length > 0 ? causa.arbitros : ARBITROS_TITULARES_NOMBRES;
+
   return (
     <Layout>
       <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
         <div>
-          <div className="flex items-center gap-2 text-[#001f3f] mb-1">
+          <div id="tour-expedientes" className="flex items-center gap-2 text-[#001f3f] mb-1">
             <FolderOpen size={24} strokeWidth={2.5} />
             <h1 className="text-2xl font-extrabold tracking-tight text-slate-900">
               Expedientes
@@ -78,18 +81,22 @@ export default function Causas() {
 
         <div className="flex items-center gap-3">
           {canCreateCausa && (
-            <Link
-              to="/causas/new"
-              className="flex items-center gap-2 px-5 py-2.5 bg-[#001f3f] text-white rounded-xl hover:bg-[#002d5a] transition-all shadow-lg shadow-blue-900/20 text-sm font-bold active:scale-95"
-            >
-              <Plus size={18} strokeWidth={3} />
-              Nuevo Expediente
-            </Link>
+            <div className="flex items-center gap-2">
+              <Link
+                id="tour-nuevo-expediente"
+                to="/causas/new"
+                className="flex items-center gap-2 px-5 py-2.5 bg-[#001f3f] text-white rounded-xl hover:bg-[#002d5a] transition-all shadow-lg shadow-blue-900/20 text-sm font-bold active:scale-95"
+              >
+                <Plus size={18} strokeWidth={3} />
+                Nuevo Expediente
+              </Link>
+              <HelpTip text="Abre el formulario para registrar un nuevo expediente en el tribunal." position="left" />
+            </div>
           )}
         </div>
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-3 mb-6">
+      <div id="tour-filtros" className="flex flex-col sm:flex-row gap-3 mb-6">
         <div className="relative flex-1">
           <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
@@ -99,16 +106,19 @@ export default function Causas() {
             className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#001f3f]/10 focus:border-[#001f3f] transition-all outline-none text-sm"
           />
         </div>
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value as CausaStatus | '')}
-          className="sm:w-48 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#001f3f]/10 focus:border-[#001f3f] transition-all outline-none text-sm text-slate-700"
-        >
-          <option value="">Todos los estados</option>
-          {STATUS_OPTIONS.map((o) => (
-            <option key={o.value} value={o.value}>{o.label}</option>
-          ))}
-        </select>
+        <div className="flex items-center gap-2">
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value as CausaStatus | '')}
+            className="sm:w-48 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#001f3f]/10 focus:border-[#001f3f] transition-all outline-none text-sm text-slate-700"
+          >
+            <option value="">Todos los estados</option>
+            {STATUS_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
+          <HelpTip text="Filtra la lista por estado del proceso: Iniciado, En proceso o Cerrado." position="left" />
+        </div>
       </div>
 
       {error && (
@@ -127,11 +137,10 @@ export default function Causas() {
             <table className="w-full text-sm">
               <thead className="bg-slate-50 text-left">
                 <tr className="text-slate-600 text-xs uppercase tracking-wider">
-                  <th className="px-4 py-3 font-semibold">Identificador</th>
-                  <th className="px-4 py-3 font-semibold">Carátula</th>
+                  <th className="px-4 py-3 font-semibold">Nro. Expediente Electrónico</th>
+                  <th className="px-4 py-3 font-semibold">Demanda</th>
                   <th className="px-4 py-3 font-semibold">Tribunal</th>
                   <th className="px-4 py-3 font-semibold">Árbitros</th>
-                  <th className="px-4 py-3 font-semibold">Estado</th>
                   <th className="px-4 py-3 font-semibold">Últ. movimiento</th>
                   <th className="px-4 py-3 font-semibold">Adjunto</th>
                   <th className="px-4 py-3"></th>
@@ -141,23 +150,29 @@ export default function Causas() {
                 {causas.data.map((c) => (
                   <tr key={c.id} className="hover:bg-slate-50 transition-colors">
                     <td className="px-4 py-3 font-mono text-[#001f3f] font-semibold">
-                      {c.identificador} <span className="text-slate-400">({c.numeroInterno})</span>
+                      {c.nroExpedienteElectronico || c.identificador}
                     </td>
                     <td className="px-4 py-3 font-semibold text-slate-800 max-w-md truncate" title={c.caratula}>
                       {c.caratula}
                     </td>
                     <td className="px-4 py-3 text-slate-600 text-xs">{c.tribunal}</td>
                     <td className="px-4 py-3 text-slate-600 text-xs">
-                      {c.arbitros && c.arbitros.length > 0 ? (
-                        <>
-                          {c.arbitros[0]}
-                          {c.arbitros.length > 1 && (
-                            <span className="text-slate-400"> +{c.arbitros.length - 1} más</span>
-                          )}
-                        </>
-                      ) : '-'}
+                      <div className="space-y-1">
+                        {getArbitrosTitulares(c).map((arbitro) => (
+                          <div key={`titular-${arbitro}`} className="font-medium text-slate-700">
+                            {arbitro}
+                          </div>
+                        ))}
+                        {(c.arbitrosSuplentes ?? []).map((arbitro) => (
+                          <div key={`suplente-${arbitro}`} className="text-slate-500">
+                            {arbitro}
+                            <span className="ml-1 rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+                              Suplente
+                            </span>
+                          </div>
+                        ))}
+                      </div>
                     </td>
-                    <td className="px-4 py-3"><StatusBadge status={c.status} /></td>
                     <td className="px-4 py-3 text-slate-500 text-xs">{c.ultimoMovimiento}</td>
                     <td className="px-4 py-3">
                       {c.nombreArchivo ? (

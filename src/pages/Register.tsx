@@ -10,6 +10,7 @@ const ROLES = [
   { value: 'demandado', label: 'Demandado' },
   { value: 'perito',    label: 'Perito' },
   { value: 'arbitro',   label: 'Árbitro' },
+  { value: 'otros',     label: 'Otros' },
 ] as const;
 
 export default function Register() {
@@ -18,6 +19,7 @@ export default function Register() {
   const [password, setPassword]     = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [rol, setRol]               = useState<string>('actor');
+  const [abogado, setAbogado]       = useState('');
   const [showPassword, setShowPassword]         = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError]           = useState<string | null>(null);
@@ -29,6 +31,11 @@ export default function Register() {
     e.preventDefault();
     setError(null);
 
+    if (password.length < 8) {
+      setError('La contraseña debe tener mínimo 8 caracteres.');
+      return;
+    }
+
     if (password !== confirmPassword) {
       setError('Las contraseñas no coinciden.');
       return;
@@ -36,12 +43,16 @@ export default function Register() {
 
     setIsLoading(true);
     try {
-      await api.post('/auth/register', { name: nombre.trim(), email: email.trim(), password, role: rol });
+      await api.post('/auth/register', { name: nombre.trim(), email: email.trim(), password, role: rol, abogado: abogado.trim() || undefined });
       setSuccess(true);
       setTimeout(() => nav('/login'), 3000);
     } catch (err) {
       if (axios.isAxiosError(err)) {
-        setError(err.response?.data?.message ?? 'Error al registrar. Intentá de nuevo.');
+        const data = err.response?.data;
+        const fieldError = data?.errors?.fieldErrors
+          ? (Object.values(data.errors.fieldErrors).flat()[0] as string | undefined)
+          : undefined;
+        setError(data?.message ?? fieldError ?? 'Error al registrar. Intentá de nuevo.');
       } else {
         setError('Error al registrar. Intentá de nuevo.');
       }
@@ -106,6 +117,17 @@ export default function Register() {
                   <option key={r.value} value={r.value}>{r.label}</option>
                 ))}
               </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-slate-700 mb-1.5 ml-1">Matrícula / N° de Abogado <span className="font-normal text-slate-400">(opcional)</span></label>
+              <input
+                type="text"
+                placeholder="Ej: 12345"
+                value={abogado}
+                onChange={(e) => setAbogado(e.target.value)}
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#001f3f]/10 focus:border-[#001f3f] transition-all"
+              />
             </div>
 
             <div>

@@ -11,12 +11,25 @@ export type Sujeto = {
   representante?: string;
   domicilio?: string;
   domicilioElectronico?: string;
+  cuit?: string;
   aprobado?: boolean;
   aprobacionToken?: string;
   calidad?: string;
 };
 
-export type MovimientoTipo = 'ACT' | 'ESC' | 'CED' | 'RES' | 'NOT' | 'AUD' | 'PER' | 'SEN';
+export type MovimientoTipo =
+  | 'DEMANDA_ACTUACION'
+  | 'DECRETO'
+  | 'CONTESTACION'
+  | 'CONTESTACION_TRASLADO'
+  | 'VISTA_CAUSA'
+  | 'AUDIENCIA_INICIAL'
+  | 'AUTOS_LAUDAR'
+  | 'LAUDO'
+  | 'ESCRITO'
+  | 'CEDULA'
+  | 'NOTIFICACION'
+  | 'PERICIA';
 
 export type Movimiento = {
   id: string;
@@ -94,6 +107,7 @@ export type Causa = {
   tribunal: string;
   nroExpedienteElectronico?: string;
   arbitros?: string[];
+  arbitrosSuplentes?: string[];
   fechaPresentacion: string;
   fechaInicio: string;
   ultimoMovimiento: string;
@@ -143,6 +157,8 @@ type CausasContextType = {
   eliminarCausa: (id: string) => Promise<void>;
   cambiarStatus: (causaId: string, status: CausaStatus) => Promise<void>;
   agregarMovimiento: (causaId: string, expNro: string, data: NuevoMovimiento) => Promise<void>;
+  actualizarMovimiento: (causaId: string, expNro: string, movId: string, data: Partial<Pick<Movimiento, 'tipo' | 'titulo' | 'descripcion' | 'sujetoNombre'>>) => Promise<void>;
+  eliminarMovimiento: (causaId: string, expNro: string, movId: string) => Promise<void>;
   agregarSujeto: (causaId: string, expNro: string, data: Sujeto) => Promise<void>;
   agregarSujetoCausa: (causaId: string, data: Sujeto) => Promise<void>;
   agregarRelacionada: (causaId: string, identificador: string, descripcion: string, archivo?: File) => Promise<void>;
@@ -307,6 +323,19 @@ export function CausasProvider({ children }: { children: React.ReactNode }) {
     await fetchCausa(causaId);
   };
 
+  const actualizarMovimiento = async (
+    causaId: string, expNro: string, movId: string,
+    data: Partial<Pick<Movimiento, 'tipo' | 'titulo' | 'descripcion' | 'sujetoNombre'>>
+  ) => {
+    await api.put(`/causas/${causaId}/expedientes/${encodeURIComponent(expNro)}/movimientos/${movId}`, data);
+    await fetchCausa(causaId);
+  };
+
+  const eliminarMovimiento = async (causaId: string, expNro: string, movId: string) => {
+    await api.delete(`/causas/${causaId}/expedientes/${encodeURIComponent(expNro)}/movimientos/${movId}`);
+    await fetchCausa(causaId);
+  };
+
   const eliminarRelacionada = async (causaId: string, identificador: string) => {
     await api.delete(`/causas/${causaId}/relacionadas/${encodeURIComponent(identificador)}`);
     await fetchCausa(causaId);
@@ -326,7 +355,7 @@ export function CausasProvider({ children }: { children: React.ReactNode }) {
     <CausasContext.Provider value={{
       causas, currentCausa, isLoading, error,
       fetchCausas, fetchCausa, crearCausa, subirCaratulaArchivo, actualizarCausa, eliminarCausa, cambiarStatus,
-      agregarMovimiento, agregarSujeto, agregarSujetoCausa, agregarRelacionada, eliminarRelacionada,
+      agregarMovimiento, actualizarMovimiento, eliminarMovimiento, agregarSujeto, agregarSujetoCausa, agregarRelacionada, eliminarRelacionada,
       agregarExpediente, eliminarExpediente,
     }}>
       {children}

@@ -1,9 +1,10 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import api from '../services/api';
 
-export type Role = 'arbitro' | 'demandado' | 'actor' | 'secretario' | 'perito';
+export type Role = 'arbitro' | 'demandado' | 'actor' | 'secretario' | 'perito' | 'otros';
 
 export type User = {
+  _id: string;
   email: string;
   name: string;
   role: Role;
@@ -15,7 +16,7 @@ type AuthContextType = {
   user: User | null;
   token: string | null;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<User>;
   logout: () => void;
 };
 
@@ -33,7 +34,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     api.get<User>('/auth/self')
       .then((res) => {
         setToken(stored);
-        setUser({ email: res.data.email, name: res.data.name, role: res.data.role, activo: res.data.activo, aprobado: res.data.aprobado });
+        setUser({ _id: res.data._id, email: res.data.email, name: res.data.name, role: res.data.role, activo: res.data.activo, aprobado: res.data.aprobado });
       })
       .catch(() => {
         localStorage.removeItem('token');
@@ -41,12 +42,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       .finally(() => setIsLoading(false));
   }, []);
 
-  const login = async (email: string, password: string) => {
+  const login = async (email: string, password: string): Promise<User> => {
     const { data } = await api.post<{ token: string }>('/auth/login', { email, password });
     localStorage.setItem('token', data.token);
     setToken(data.token);
     const me = await api.get<User>('/auth/self');
-    setUser({ email: me.data.email, name: me.data.name, role: me.data.role, activo: me.data.activo, aprobado: me.data.aprobado });
+    const userData: User = { _id: me.data._id, email: me.data.email, name: me.data.name, role: me.data.role, activo: me.data.activo, aprobado: me.data.aprobado };
+    setUser(userData);
+    return userData;
   };
 
   const logout = () => {
@@ -74,6 +77,7 @@ export const ROLE_LABELS: Record<Role, string> = {
   actor:      'Actor',
   secretario: 'Secretario/a del Tribunal',
   perito:     'Perito',
+  otros:      'Otros',
 };
 
 export function usePermissions() {
